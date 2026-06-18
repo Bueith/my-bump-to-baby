@@ -1,0 +1,4 @@
+{
+  "outputDirectory": ".",
+  "buildCommand": "echo 'No build step required'"
+}
