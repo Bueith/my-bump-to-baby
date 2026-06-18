@@ -5,9 +5,18 @@
 // Results are filtered to trusted pregnancy/medical domains and ranked
 // by source authority + relevance before being returned to the client.
 //
+// For the highlighted "best" result, this also fetches the real
+// article page and uses Mozilla's Readability library (the engine
+// behind Firefox's Reader Mode) to reliably identify the actual
+// article body — not navigation, ads, or "related articles" widgets —
+// then picks the most relevant paragraph from within that real body.
+//
 // Required environment variable (set in Vercel project settings
 // and in .env.local for local testing with vercel dev):
 //   SERPER_API_KEY  - your API key from https://serper.dev
+
+import { Readability } from "@mozilla/readability";
+import { parseHTML } from "linkedom";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -70,27 +79,29 @@ export default async function handler(req, res) {
   }
 
   /**
-   * Fetches the actual article page and extracts the paragraph(s) that
-   * best match the query — not just the first paragraph, and not the
-   * generic search-snippet teaser. This is what fixes the "the link
-   * dumped me at the top of an unrelated section" problem: we read the
-   * real page server-side and find the part that actually answers the
-   * question, then show that directly on the card.
+   * Fetches the actual article page and uses Readability (the same
+   * content-extraction engine behind Firefox's Reader Mode) to isolate
+   * the real article body — reliably excluding navigation menus,
+   * "related articles" widgets, and ads, which a hand-rolled regex
+   * approach cannot reliably distinguish from real content.
    *
-   * Always has a safe fallback: if the fetch fails, times out, or the
-   * page can't be parsed, the caller just keeps using the short search
-   * snippet instead — this never breaks the response.
+   * Within that clean article body, we then score paragraphs by query
+   * relevance and return the single best-matching one — so the result
+   * is the part of the article that actually answers the question,
+   * not just the introduction.
+   *
+   * Always has a safe fallback: if the fetch fails, times out, or
+   * Readability can't parse the page, the caller just keeps using the
+   * short search snippet instead — this never breaks the response.
    */
   async function extractRelevantExcerpt(url, query) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), 6000);
 
     try {
       const pageResponse = await fetch(url, {
         signal: controller.signal,
         headers: {
-          // A normal browser-like user agent — some sites block requests
-          // that look like bots/scrapers with no user agent at all.
           "User-Agent": "Mozilla/5.0 (compatible; NurtureBot/1.0; +https://nurture.app)"
         }
       });
@@ -100,51 +111,35 @@ export default async function handler(req, res) {
 
       const html = await pageResponse.text();
 
-      // Strip script/style/nav/header/footer blocks entirely before
-      // converting to text, so junk (menus, ads, cookie banners) never
-      // makes it into the candidate paragraphs.
-      const cleaned = html
-        .replace(/<script[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
-        .replace(/<header[\s\S]*?<\/header>/gi, " ")
-        .replace(/<footer[\s\S]*?<\/footer>/gi, " ");
+      // Parse the HTML into a real DOM (linkedom), then hand it to
+      // Readability exactly the way a browser's Reader Mode would.
+      const { document } = parseHTML(html);
+      const reader = new Readability(document);
+      const article = reader.parse();
 
-      // Pull out <p> tag contents specifically — articles are reliably
-      // structured this way across all of our trusted domains, and it
-      // avoids pulling in stray text from buttons, captions, etc.
-      const paragraphMatches = [...cleaned.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
+      if (!article || !article.textContent) return null;
 
-      const paragraphs = paragraphMatches
-        .map((m) =>
-          m[1]
-            .replace(/<[^>]+>/g, " ")   // strip any nested tags
-            .replace(/&nbsp;/g, " ")
-            .replace(/&amp;/g, "&")
-            .replace(/&#39;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/\s+/g, " ")
-            .trim()
-        )
-        .filter((p) => p.length >= 60);  // skip short fragments/captions
+      // Readability gives us clean article text with paragraph breaks
+      // preserved. Split into paragraphs and discard fragments that
+      // are too short to be real sentences (stray captions, bylines).
+      const paragraphs = article.textContent
+        .split(/\n+/)
+        .map((p) => p.replace(/\s+/g, " ").trim())
+        .filter((p) => p.length >= 60);
 
       if (paragraphs.length === 0) return null;
 
       const queryWords = query.toLowerCase().split(/\s+/).filter((w) => w.length >= 4);
 
-      // Score every paragraph by how many distinct query words it
-      // contains, then take the single highest-scoring one. Ties are
-      // broken by preferring the earlier paragraph (usually more
-      // foundational / introductory to the topic).
+      // Score every real paragraph by how many distinct query words it
+      // contains, take the single highest-scoring one. Ties favor the
+      // earlier paragraph (usually more foundational to the topic).
       let bestParagraph = null;
       let bestScore = -1;
 
       paragraphs.forEach((p, index) => {
         const lower = p.toLowerCase();
         const matchCount = queryWords.filter((w) => lower.includes(w)).length;
-        // Small positional bonus for earlier paragraphs so a tie goes
-        // to the more likely "intro" paragraph rather than a random
-        // later one that happens to repeat the same words.
         const score = matchCount - index * 0.01;
         if (matchCount > 0 && score > bestScore) {
           bestScore = score;
@@ -152,10 +147,14 @@ export default async function handler(req, res) {
         }
       });
 
-      if (!bestParagraph) return null;
+      // If nothing in the article actually matches the query words,
+      // fall back to the article's own opening paragraph rather than
+      // returning nothing — still real article content, just not
+      // targeted to a specific phrase.
+      if (!bestParagraph) {
+        bestParagraph = paragraphs[0];
+      }
 
-      // Cap length so the card stays readable — a real excerpt, not a
-      // wall of text, but several real sentences rather than one line.
       if (bestParagraph.length > 600) {
         bestParagraph = bestParagraph.slice(0, 600).replace(/\s+\S*$/, "") + "…";
       }
