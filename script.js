@@ -1,104 +1,141 @@
 /* =====================================================
-   NURTURE — app logic
-   Vanilla JS, no build step. Everything persists via
-   localStorage so data never leaves this browser.
+   NURTURE — app logic v2
+   Stage-aware: everything adapts to pregnant vs postpartum.
+   All data persists via localStorage — stays on device.
    ===================================================== */
 
 (function () {
   "use strict";
 
   /* ---------------------------------------------------
-     1. THE 18-QUESTION MASTER DATA SET
+     1. STAGE-AWARE CONTENT DEFINITIONS
      --------------------------------------------------- */
+
+  // Checklist suggestions shown by stage — user picks which to add.
+  const CHECKLIST_SUGGESTIONS = {
+    pregnant: [
+      "Take prenatal vitamin",
+      "Drink 8 glasses of water",
+      "Do 10 minutes of gentle walking",
+      "Eat a nutritious meal",
+      "Rest for 20 minutes",
+      "Do pelvic floor exercises",
+      "Call or text someone you love",
+      "Track baby movements",
+      "Take bump photo",
+      "Pack hospital bag item"
+    ],
+    postpartum: [
+      "Feed baby",
+      "Take pain medication if needed",
+      "Rest while baby sleeps",
+      "Drink a full glass of water",
+      "Eat something nourishing",
+      "Take a shower",
+      "Get outside for 5 minutes",
+      "Ask for help with one task",
+      "Check your wound/stitches",
+      "Take postnatal vitamin"
+    ]
+  };
+
+  // Mood options — same for both stages
+  const MOODS = [
+    { value: 5, emoji: "😊", label: "Great" },
+    { value: 4, emoji: "🙂", label: "Good" },
+    { value: 3, emoji: "😐", label: "Okay" },
+    { value: 2, emoji: "😔", label: "Low" },
+    { value: 1, emoji: "😢", label: "Hard" }
+  ];
+
+  // Search context appended per stage so results are relevant
+  const SEARCH_CONTEXT = {
+    pregnant: "pregnancy pregnant",
+    postpartum: "postpartum newborn baby after birth"
+  };
+
+  // 18 questions tagged by stage
   const QUESTIONS = [
-    { id: "q1", topic: "pregnancy", q: "Is my baby okay?",
+    { id: "q1", stage: "pregnant", q: "Is my baby okay?",
       sub: ["Normal heartbeats", "fetal movement slowdowns", "dangerous pains", "early maternal guilt"],
-      a: "Unfamiliar sensations are mostly normal. Significant changes in fetal movement later on, bleeding, fluid leaks, or sharp pains merit an immediate medical check." },
-    { id: "q2", topic: "pregnancy", q: "Is what I'm feeling normal?",
+      a: "Unfamiliar sensations are mostly normal. Significant changes in fetal movement, bleeding, fluid leaks, or sharp pains merit an immediate medical check." },
+    { id: "q2", stage: "pregnant", q: "Is what I'm feeling normal?",
       sub: ["Total exhaustion", "all-day nausea", "heavy emotional sensitivity", "body structural shifts"],
       a: "Fatigue, appetite swings, and sleep disruptions are completely universal. Symptoms vary wildly across mothers." },
-    { id: "q3", topic: "pregnancy", q: "Did I hurt my baby before I knew I was pregnant?",
+    { id: "q3", stage: "pregnant", q: "Did I hurt my baby before I knew I was pregnant?",
       sub: ["One-off alcohol use", "prescription medications", "accidental food ingestion"],
       a: "Isolated early exposures rarely cause automatic damage. Healthcare teams focus on cumulative timing and dose, not judgment or guilt." },
-    { id: "q4", topic: "pregnancy", q: "What can't I eat?",
-      sub: ["Daily coffee limits", "raw sushi", "unpasteurized soft cheeses", "specific herbal infusions"],
-      a: "Focus centers on food safety and infection safety; lines change by method of prep, not absolute restriction." },
-    { id: "q5", topic: "pregnancy", q: "Will I lose the pregnancy?",
-      sub: ["Early spotting", "mild cramping", "lack of consistent morning sickness", "prior family losses"],
-      a: "Mild symptoms can perfectly exist in healthy gestations. Symptom tracking on internet forums rarely displays the full clinical reality." },
-    { id: "q6", topic: "pregnancy", q: "How painful is birth?",
-      sub: ["Emotional survival capability", "coping limits", "unexpected operational changes"],
-      a: "Birth anxieties are entirely standard. Pre-planning, supportive birth environments, and education drastically temper tension." },
-    { id: "q7", topic: "pregnancy", q: "Will I be a good mother?",
-      sub: ["Absence of an instant emotional bond", "feeling unready", "outward social pressures"],
-      a: "Emotional bonding processes often don't occur instantly during gestation; slow attachment profiles do not predict poor parenting." },
-    { id: "q8", topic: "pregnancy", q: "Why don't I feel happy all the time?",
-      sub: ["Unprompted mood drops", "heavy stress"],
+    { id: "q4", stage: "pregnant", q: "What can't I eat during pregnancy?",
+      sub: ["Daily coffee limits", "raw sushi", "unpasteurized soft cheeses", "herbal teas"],
+      a: "Focus centers on food safety and infection risk. Lines change by method of preparation, not absolute restriction." },
+    { id: "q5", stage: "pregnant", q: "Will I lose the pregnancy?",
+      sub: ["Early spotting", "mild cramping", "lack of morning sickness", "prior losses"],
+      a: "Mild symptoms can exist in healthy gestations. Symptom tracking on internet forums rarely displays the full clinical reality." },
+    { id: "q6", stage: "pregnant", q: "How painful is birth?",
+      sub: ["Emotional survival capability", "coping limits", "unexpected changes during labour"],
+      a: "Birth anxieties are entirely standard. Pre-planning, supportive environments, and education drastically temper tension." },
+    { id: "q7", stage: "pregnant", q: "Will I be a good mother?",
+      sub: ["No instant emotional bond yet", "feeling unready", "social pressures"],
+      a: "Emotional bonding often doesn't occur instantly during pregnancy. Slow attachment does not predict poor parenting." },
+    { id: "q8", stage: "pregnant", q: "Why don't I feel happy all the time?",
+      sub: ["Unprompted mood drops", "heavy stress", "mixed feelings about the pregnancy"],
       a: "Varied or mixed emotions are common. Persistent feelings of hopelessness or panic warrant prompt, caring support." },
-    { id: "q9", topic: "pregnancy", q: "Can I still exercise / travel / have sex?",
-      sub: [],
-      a: "Healthy pregnancies smoothly continue daily routines with minor positional modifications. Personal medical status determines absolute rules." },
-    { id: "q10", topic: "pregnancy", q: "When should I call the doctor?",
-      sub: ["Bleeding", "minimized baby kicks", "persistent severe headaches", "high fevers", "sudden fluid leaking"],
-      a: "Uncertainty itself is a fully valid justification to reach out." },
-
-    { id: "q11", topic: "postpartum", q: "Is my baby eating enough?",
-      sub: ["Latching struggles", "volumetric formula counts", "cluster feeding patterns", "slow growth worries"],
-      a: "Feeding worry is universal. Long-term weight tracking curves matter far more than single daily feedings." },
-    { id: "q12", topic: "postpartum", q: "Why is my baby crying?",
-      sub: ["Inherent pain", "pure hunger cues", "hidden sicknesses", "structural errors"],
-      a: "Most regular triggers stem from raw hunger, sleep needs, sensory overstimulation, or physical contact needs. Assess persistent crying professionally." },
-    { id: "q13", topic: "postpartum", q: "Why am I not myself after birth?",
-      sub: ["Spontaneous crying fits", "postpartum rage", "emotional detachment", "deep exhaustion"],
-      a: "Acute short-term hormonal/emotional shifts are incredibly normal. Long-term depression or self-harm thoughts require structured professional support." },
-    { id: "q14", topic: "postpartum", q: "Why am I so exhausted?",
-      sub: [],
-      a: "Chronic sleep deprivation fundamentally degrades short-term memory, coping skills, and emotional stability. Utilizing local support systems is vital." },
-    { id: "q15", topic: "postpartum", q: "Is this normal after birth?",
-      sub: ["Post-birth bleeding cycles", "healing stitches", "breast engorgement"],
-      a: "Complete internal physical restoration demands weeks, not days. Spikes in fever or sudden heavy bleeding demand evaluation." },
-    { id: "q16", topic: "postpartum", q: "Why don't I feel instantly bonded?",
-      sub: [],
-      a: "Instant maternal attachment is not a universal rule. Deep bonding naturally cultivates over time through continuous day-to-day care." },
-    { id: "q17", topic: "postpartum", q: "Am I ruining my baby?",
-      sub: ["Habitual contact naps", "quick responses to crying", "lack of rigid sleep routines"],
-      a: "New parents easily misinterpret natural infant dependency as a bad habit. Responsive care does not spoil a newborn." },
-    { id: "q18", topic: "postpartum", q: "When does life feel normal again?",
-      sub: ["Mourning a past personal identity", "shifting relationship balances", "loss of predictable daily schedules"],
-      a: "There is no fixed calendar; personal adaptation curves are highly distinct." }
+    { id: "q9", stage: "pregnant", q: "Can I still exercise, travel and have sex?",
+      sub: ["Safe exercise types", "flying while pregnant", "intimacy during pregnancy"],
+      a: "Healthy pregnancies can continue daily routines with minor modifications. Personal medical status determines specific rules." },
+    { id: "q10", stage: "pregnant", q: "When should I call the doctor during pregnancy?",
+      sub: ["Bleeding", "reduced baby kicks", "severe headaches", "high fever", "sudden fluid leaking"],
+      a: "Uncertainty itself is a fully valid reason to reach out. Always call if something feels wrong." },
+    { id: "q11", stage: "postpartum", q: "Is my baby eating enough?",
+      sub: ["Latching struggles", "formula amounts", "cluster feeding", "slow weight gain"],
+      a: "Feeding worry is universal. Long-term weight tracking curves matter far more than single daily feeding counts." },
+    { id: "q12", stage: "postpartum", q: "Why is my baby crying so much?",
+      sub: ["Pain vs hunger cues", "colic", "overstimulation", "overtiredness"],
+      a: "Most crying stems from hunger, sleep needs, sensory overstimulation, or need for contact. Assess persistent or unusual crying with a professional." },
+    { id: "q13", stage: "postpartum", q: "Why am I not myself after birth?",
+      sub: ["Spontaneous crying", "postpartum rage", "emotional detachment", "deep exhaustion"],
+      a: "Short-term hormonal and emotional shifts after birth are normal. Long-term depression or self-harm thoughts require structured professional support." },
+    { id: "q14", stage: "postpartum", q: "Why am I so exhausted after having my baby?",
+      sub: ["Sleep deprivation effects", "physical recovery", "emotional load"],
+      a: "Chronic sleep deprivation degrades memory, coping, and emotional stability. Accepting and asking for help is essential, not optional." },
+    { id: "q15", stage: "postpartum", q: "Is this normal after birth?",
+      sub: ["Postpartum bleeding", "healing stitches", "breast engorgement", "night sweats"],
+      a: "Complete physical restoration takes weeks, not days. Spikes in fever or sudden heavy bleeding demand immediate evaluation." },
+    { id: "q16", stage: "postpartum", q: "Why don't I feel instantly bonded with my baby?",
+      sub: ["No immediate rush of love", "feeling detached", "guilt about not bonding"],
+      a: "Instant attachment is not universal. Deep bonding naturally builds over time through daily care — it does not mean anything is wrong." },
+    { id: "q17", stage: "postpartum", q: "Am I spoiling my baby?",
+      sub: ["Contact naps", "responding quickly to crying", "no strict sleep schedule yet"],
+      a: "Responsive care does not spoil a newborn. Natural infant dependency in the early weeks is exactly what healthy development looks like." },
+    { id: "q18", stage: "postpartum", q: "When does life feel normal again after birth?",
+      sub: ["Identity shift", "relationship changes", "loss of routine and independence"],
+      a: "There is no fixed timeline — every mother's adjustment curve is different. Be gentle with yourself in the comparison." }
   ];
 
   /* ---------------------------------------------------
-     2. STORAGE HELPERS (the "true offline" layer)
+     2. STORAGE HELPERS
      --------------------------------------------------- */
-  const STORE_KEY = "nurture_state_v1";
-
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return defaultState();
-      const parsed = JSON.parse(raw);
-      return Object.assign(defaultState(), parsed);
-    } catch (e) {
-      return defaultState();
-    }
-  }
+  const STORE_KEY = "nurture_state_v2";
 
   function defaultState() {
     return {
-      name: "there",
-      checklist: { feed: false, water: false, rest: false },
-      today: { dayKey: todayKey(), water: 0, feedings: 0, mood: null, sleep: 0 },
+      // null = not onboarded yet, "pregnant" or "postpartum" once set
+      stage: null,
+      name: "",
+      onboarded: false,
+      checklist: [],          // user's own items: [{id, label, done}]
+      today: {
+        dayKey: todayKey(),
+        water: 0,
+        feedings: 0,
+        mood: null,
+        sleep: 0,
+        vitaminTaken: false
+      },
       history: [],
       village: {
-        members: [
-          { id: "m1", name: "James", role: "Partner" },
-          { id: "m2", name: "Mom", role: "Family" }
-        ],
-        tasks: [
-          { id: "t1", label: "Pick up groceries", assignee: "James", done: false },
-          { id: "t2", label: "Night feed (12am)", assignee: "James", done: true }
-        ]
+        members: [],
+        tasks: []
       },
       care: {
         contacts: [{ id: "c1", name: "Emergency Services", role: "Emergency", phone: "112" }],
@@ -106,6 +143,16 @@
         diary: []
       }
     };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return defaultState();
+      return Object.assign(defaultState(), JSON.parse(raw));
+    } catch (e) {
+      return defaultState();
+    }
   }
 
   function saveState() {
@@ -126,8 +173,15 @@
         mood: state.today.mood,
         sleep: state.today.sleep
       });
-      state.today = { dayKey: key, water: 0, feedings: 0, mood: null, sleep: 0 };
-      state.checklist = { feed: false, water: false, rest: false };
+      state.today = {
+        dayKey: key,
+        water: 0,
+        feedings: 0,
+        mood: null,
+        sleep: 0,
+        vitaminTaken: false
+      };
+      state.checklist = state.checklist.map((item) => ({ ...item, done: false }));
       saveState();
     }
   }
@@ -136,33 +190,142 @@
   checkForNewDay();
 
   /* ---------------------------------------------------
-     3. VIEW SWITCHING — marketing <-> app
+     3. VIEW SWITCHING — marketing / onboarding / app
      --------------------------------------------------- */
   const marketingView = document.getElementById("marketing-view");
-  const appView = document.getElementById("app-view");
+  const appView       = document.getElementById("app-view");
+  const onboardView   = document.getElementById("onboard-view");
+
+  function showMarketing() {
+    marketingView.hidden = false;
+    appView.hidden       = true;
+    onboardView.hidden   = true;
+    window.scrollTo(0, 0);
+  }
+
+  function showOnboarding() {
+    marketingView.hidden = true;
+    appView.hidden       = true;
+    onboardView.hidden   = false;
+    window.scrollTo(0, 0);
+    renderOnboarding();
+  }
 
   function showApp() {
     marketingView.hidden = true;
-    appView.hidden = false;
+    appView.hidden       = false;
+    onboardView.hidden   = true;
     window.scrollTo(0, 0);
+    applyStageToApp();
     renderAll();
   }
 
-  function showMarketing() {
-    appView.hidden = true;
-    marketingView.hidden = false;
-    window.scrollTo(0, 0);
+  function launchApp() {
+    if (!state.onboarded) {
+      showOnboarding();
+    } else {
+      showApp();
+    }
   }
 
-  document.getElementById("nav-launch-app").addEventListener("click", (e) => { e.preventDefault(); showApp(); });
-  document.getElementById("hero-launch-app").addEventListener("click", (e) => { e.preventDefault(); showApp(); });
+  document.getElementById("nav-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
+  document.getElementById("hero-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
   document.getElementById("app-exit").addEventListener("click", (e) => { e.preventDefault(); showMarketing(); });
 
   /* ---------------------------------------------------
-     4. APP TAB NAVIGATION
+     4. ONBOARDING — name + stage selection
+     --------------------------------------------------- */
+  function renderOnboarding() {
+    const container = document.getElementById("onboard-content");
+    container.innerHTML = `
+      <div class="onboard-card">
+        <span class="onboard-emoji">🌿</span>
+        <h1>Welcome to Nurture</h1>
+        <p>A quiet, private companion for your pregnancy and beyond. Let's set things up in about 30 seconds.</p>
+
+        <label for="ob-name">What should we call you?</label>
+        <input type="text" id="ob-name" placeholder="Your first name" autocomplete="given-name" value="${escapeHtml(state.name)}" />
+
+        <label>Where are you right now?</label>
+        <div class="stage-buttons">
+          <button class="stage-btn ${state.stage === 'pregnant' ? 'is-selected' : ''}"
+                  data-stage="pregnant">
+            <span class="stage-btn__emoji">🤰</span>
+            <span class="stage-btn__label">I'm pregnant</span>
+          </button>
+          <button class="stage-btn ${state.stage === 'postpartum' ? 'is-selected' : ''}"
+                  data-stage="postpartum">
+            <span class="stage-btn__emoji">👶</span>
+            <span class="stage-btn__label">I've had my baby</span>
+          </button>
+        </div>
+
+        <button class="btn btn--primary btn--full" id="ob-continue" ${!state.stage ? 'disabled' : ''}>
+          Continue →
+        </button>
+      </div>`;
+
+    container.querySelectorAll(".stage-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        container.querySelectorAll(".stage-btn").forEach((b) => b.classList.remove("is-selected"));
+        btn.classList.add("is-selected");
+        state.stage = btn.dataset.stage;
+        document.getElementById("ob-continue").disabled = false;
+      });
+    });
+
+    document.getElementById("ob-continue").addEventListener("click", () => {
+      const name = document.getElementById("ob-name").value.trim();
+      if (!state.stage) return;
+      state.name = name || "there";
+      state.onboarded = true;
+      saveState();
+      showApp();
+    });
+  }
+
+  /* ---------------------------------------------------
+     5. STAGE TRANSITION — "I've had my baby"
+     --------------------------------------------------- */
+  function transitionToPostpartum() {
+    if (state.stage === "postpartum") return;
+    state.stage = "postpartum";
+    // Clear pregnancy checklist items and reset to blank for postpartum
+    state.checklist = [];
+    saveState();
+    applyStageToApp();
+    renderAll();
+    openPanel("home");
+  }
+
+  /* ---------------------------------------------------
+     6. APPLY STAGE TO APP — show/hide stage-specific elements
+     --------------------------------------------------- */
+  function applyStageToApp() {
+    const isPregnant   = state.stage === "pregnant";
+    const isPostpartum = state.stage === "postpartum";
+
+    // Pregnant-only elements
+    document.querySelectorAll("[data-stage-show='pregnant']").forEach((el) => {
+      el.hidden = !isPregnant;
+    });
+    // Postpartum-only elements
+    document.querySelectorAll("[data-stage-show='postpartum']").forEach((el) => {
+      el.hidden = !isPostpartum;
+    });
+
+    // Update app header greeting stage label
+    const stageLabel = document.getElementById("app-stage-label");
+    if (stageLabel) {
+      stageLabel.textContent = isPregnant ? "Pregnancy" : "New Mum";
+    }
+  }
+
+  /* ---------------------------------------------------
+     7. APP TAB NAVIGATION
      --------------------------------------------------- */
   const navItems = document.querySelectorAll(".app-nav__item");
-  const panels = document.querySelectorAll(".app-panel");
+  const panels   = document.querySelectorAll(".app-panel");
 
   function openPanel(name) {
     navItems.forEach((btn) => btn.classList.toggle("is-active", btn.dataset.tab === name));
@@ -177,20 +340,182 @@
   document.querySelectorAll("[data-open-panel]").forEach((btn) => {
     btn.addEventListener("click", () => {
       openPanel(btn.dataset.openPanel);
-      const preset = btn.dataset.presetTag;
-      if (preset === "mind") filterQuestionsByWord("feeling");
-      if (preset === "body") filterQuestionsByWord("exhausted");
     });
   });
 
   /* ---------------------------------------------------
-     5. QUESTION HUB — render, search, accordion
-        (shared logic for marketing page + Companion tab)
+     8. HOME TAB
      --------------------------------------------------- */
+  function renderHome() {
+    const isPregnant = state.stage === "pregnant";
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    document.getElementById("home-greeting").textContent = `${greeting}, ${state.name} 🌿`;
+
+    // Mood selector
+    const moodRow = document.getElementById("mood-row");
+    moodRow.innerHTML = MOODS.map((m) => `
+      <button class="mood-btn ${state.today.mood === m.value ? 'is-selected' : ''}"
+              data-mood="${m.value}" aria-label="${m.label}">
+        <span class="mood-btn__emoji">${m.emoji}</span>
+        <span class="mood-btn__label">${m.label}</span>
+      </button>`).join("");
+
+    moodRow.querySelectorAll(".mood-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.today.mood = parseInt(btn.dataset.mood);
+        saveState();
+        renderHome();
+        renderPulse();
+      });
+    });
+
+    // Checklist
+    const checklistEl = document.getElementById("home-checklist");
+    checklistEl.innerHTML = state.checklist.length === 0
+      ? `<p class="muted-text">No items yet — add some below or pick from suggestions.</p>`
+      : state.checklist.map((item) => `
+          <li class="${item.done ? 'is-done' : ''}">
+            <label>
+              <input type="checkbox" data-check-id="${item.id}" ${item.done ? "checked" : ""} />
+              <span>${escapeHtml(item.label)}</span>
+            </label>
+            <button class="item-remove" data-remove-check="${item.id}" aria-label="Remove">✕</button>
+          </li>`).join("");
+
+    checklistEl.querySelectorAll("[data-check-id]").forEach((box) => {
+      box.addEventListener("change", () => {
+        const item = state.checklist.find((i) => i.id === box.dataset.checkId);
+        if (item) { item.done = box.checked; saveState(); renderHome(); }
+      });
+    });
+    checklistEl.querySelectorAll("[data-remove-check]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.checklist = state.checklist.filter((i) => i.id !== btn.dataset.removeCheck);
+        saveState(); renderHome();
+      });
+    });
+
+    // Suggestions panel
+    const suggestEl = document.getElementById("checklist-suggestions");
+    const suggestions = CHECKLIST_SUGGESTIONS[state.stage] || [];
+    const existing = state.checklist.map((i) => i.label);
+    const available = suggestions.filter((s) => !existing.includes(s));
+    suggestEl.innerHTML = available.map((s) => `
+      <button class="chip suggest-chip" data-suggest="${escapeHtml(s)}">${escapeHtml(s)}</button>`
+    ).join("");
+
+    suggestEl.querySelectorAll(".suggest-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        state.checklist.push({ id: "c" + Date.now(), label: chip.dataset.suggest, done: false });
+        saveState(); renderHome();
+      });
+    });
+
+    // "I've had my baby" transition card — only shown to pregnant users
+    const transitionCard = document.getElementById("baby-arrived-card");
+    if (transitionCard) transitionCard.hidden = state.stage !== "pregnant";
+  }
+
+  // Add checklist item manually
+  document.getElementById("add-checklist-btn").addEventListener("click", () => {
+    openModal("Add checklist item", `
+      <label for="f-check">What do you want to remember today?</label>
+      <input type="text" id="f-check" name="label" required placeholder="e.g. Call midwife" />`,
+      (data) => {
+        const label = data.get("label").trim();
+        if (!label) return;
+        state.checklist.push({ id: "c" + Date.now(), label, done: false });
+        saveState(); renderHome();
+      }
+    );
+  });
+
+  // Baby arrived transition
+  document.getElementById("baby-arrived-btn").addEventListener("click", () => {
+    if (confirm("Has your baby arrived? This will switch your whole app to your new mum experience.")) {
+      transitionToPostpartum();
+    }
+  });
+
+  /* ---------------------------------------------------
+     9. PULSE TAB
+     --------------------------------------------------- */
+  function renderPulse() {
+    checkForNewDay();
+    const recent    = state.history.slice(0, 6);
+    const sleepVals = [state.today.sleep, ...recent.map((d) => d.sleep || 0)];
+    const waterVals = [state.today.water, ...recent.map((d) => d.water || 0)];
+    const feedTotal = state.today.feedings + recent.reduce((s, d) => s + (d.feedings || 0), 0);
+    const moodVals  = [state.today.mood, ...recent.map((d) => d.mood)].filter((m) => m !== null && m !== undefined);
+    const avg       = (arr) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+
+    const avgMood  = avg(moodVals);
+    const moodEmoji = avgMood >= 4.5 ? "😊" : avgMood >= 3.5 ? "🙂" : avgMood >= 2.5 ? "😐" : avgMood >= 1.5 ? "😔" : "😢";
+
+    document.getElementById("stat-avg-mood").textContent  = moodVals.length ? `${moodEmoji} ${avgMood.toFixed(1)}` : "—";
+    document.getElementById("stat-avg-sleep").textContent = `${avg(sleepVals).toFixed(1)}h`;
+    document.getElementById("stat-avg-water").textContent = `${avg(waterVals).toFixed(1)} cups`;
+    document.getElementById("stat-feedings").textContent  = String(feedTotal);
+
+    // Pulse explanation — what each stat comes from
+    document.getElementById("pulse-data-note").textContent =
+      "Mood from your daily check-in on Home · Water and feedings from Logs · Sleep from Logs";
+
+    // 7-day mood bar chart
+    const moodHistory = [];
+    [...recent].reverse().forEach((d) => moodHistory.push(d.mood || 3));
+    while (moodHistory.length < 6) moodHistory.unshift(3);
+    moodHistory.push(state.today.mood || 3);
+
+    const dayLabels = ["6d ago", "5d", "4d", "3d", "2d", "Yest.", "Today"];
+    document.getElementById("mood-bar-chart").innerHTML = moodHistory.map((val, i) => {
+      const clamped = Math.max(1, Math.min(5, val));
+      const pct = (clamped / 5) * 100;
+      const mood = MOODS.find((m) => m.value === clamped) || MOODS[2];
+      return `
+        <div class="bar-chart__col">
+          <span class="bar-chart__emoji">${mood.emoji}</span>
+          <div class="bar-chart__bar" style="height:${pct}%"></div>
+          <span class="bar-chart__day">${dayLabels[i]}</span>
+        </div>`;
+    }).join("");
+
+    // Gentle insight
+    const insightEl = document.getElementById("pulse-insight");
+    let insight = "";
+    if (moodVals.length < 3) {
+      insight = "Check in with your mood on the Home tab each day — after a few days your trends will appear here.";
+    } else if (avgMood <= 2) {
+      insight = "Your mood has been quite low this week. That's okay — and it's worth being gentle with yourself. If it continues, please talk to someone you trust or your midwife.";
+    } else if (avgMood >= 4) {
+      insight = "You've had a good week — that's worth noticing. Take a moment to acknowledge that.";
+    } else if (avg(sleepVals) < 4) {
+      insight = "Your sleep has been very low this week. Even 20 minutes of rest when you can makes a real difference.";
+    } else {
+      insight = "Things look fairly steady. Keep going at your own pace — you're doing a wonderful job.";
+    }
+    insightEl.textContent = insight;
+  }
+
+  /* ---------------------------------------------------
+     10. COMPANION / QUESTION HUB
+     --------------------------------------------------- */
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str || "";
+    return div.innerHTML;
+  }
+
+  function matchesQuery(item, query) {
+    if (!query) return true;
+    const haystack = `${item.q} ${item.sub.join(" ")} ${item.a}`.toLowerCase();
+    return haystack.includes(query.toLowerCase());
+  }
+
   function questionCardHTML(item, headingTag) {
     const subList = item.sub.length
-      ? `<ul>${item.sub.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>`
-      : "";
+      ? `<ul>${item.sub.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>` : "";
     return `
       <div class="qa-card" data-qid="${item.id}">
         <button class="qa-card__question" aria-expanded="false">
@@ -204,24 +529,12 @@
       </div>`;
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  function renderQuestionGroup(containerId, topic, query, headingTag) {
+  function renderQuestionGroup(containerId, stage, query, headingTag) {
     const container = document.getElementById(containerId);
     if (!container) return 0;
-    const matches = QUESTIONS.filter((item) => item.topic === topic && matchesQuery(item, query));
+    const matches = QUESTIONS.filter((item) => item.stage === stage && matchesQuery(item, query));
     container.innerHTML = matches.map((item) => questionCardHTML(item, headingTag)).join("");
     return matches.length;
-  }
-
-  function matchesQuery(item, query) {
-    if (!query) return true;
-    const haystack = (item.q + " " + item.sub.join(" ") + " " + item.a).toLowerCase();
-    return haystack.includes(query.toLowerCase());
   }
 
   function wireAccordion(containerId) {
@@ -236,64 +549,132 @@
     });
   }
 
-  function renderHub(searchInputId, listIdPregnancy, listIdPostpartum, countId, emptyId, headingTag) {
-    const query = document.getElementById(searchInputId).value.trim();
-    const countA = renderQuestionGroup(listIdPregnancy, "pregnancy", query, headingTag);
-    const countB = renderQuestionGroup(listIdPostpartum, "postpartum", query, headingTag);
-    const total = countA + countB;
-    const countEl = document.getElementById(countId);
-    const emptyEl = document.getElementById(emptyId);
-    if (countEl) countEl.textContent = query ? `${total} question${total === 1 ? "" : "s"} match "${query}"` : "";
-    if (emptyEl) emptyEl.hidden = total !== 0;
+  // Stage-aware hub render — only shows questions for current stage
+  function renderHub(searchInputId, listIdStage, countId, emptyId, trustedId, headingTag) {
+    const query    = document.getElementById(searchInputId)?.value.trim() || "";
+    const stage    = state.stage || "pregnant";
+    const count    = renderQuestionGroup(listIdStage, stage, query, headingTag);
+    const countEl  = document.getElementById(countId);
+    const emptyEl  = document.getElementById(emptyId);
+    if (countEl) countEl.textContent = query ? `${count} question${count === 1 ? "" : "s"} match "${query}"` : "";
+    if (emptyEl) emptyEl.hidden = count !== 0;
 
-    // Show the "search trusted sources" fallback only when there's an
-    // actual query with zero local matches.
-    const trustedId = emptyId === "hub-empty" ? "hub-trusted-search" : "app-trusted-search";
     const trustedPanel = document.getElementById(trustedId);
     if (trustedPanel) {
-      const showFallback = !!query && total === 0;
-      trustedPanel.hidden = !showFallback;
-      if (showFallback) {
+      const show = !!query && count === 0;
+      trustedPanel.hidden = !show;
+      if (show) {
         trustedPanel.dataset.pendingQuery = query;
-        // Reset any previous results when the search term changes.
         const resultsEl = trustedPanel.querySelector(".trusted-results");
         if (resultsEl) resultsEl.innerHTML = "";
         const btn = trustedPanel.querySelector("button");
-        if (btn) btn.textContent = `Search trusted medical sources for "${query}"`;
+        if (btn) btn.textContent = `Search trusted sources for "${query}"`;
       }
     }
   }
 
+  // Marketing page hub — shows both stages
+  function renderMarketingHub(query) {
+    const pregCount  = renderQuestionGroup("hub-list-pregnancy", "pregnant", query, "h3");
+    const postCount  = renderQuestionGroup("hub-list-postpartum", "postpartum", query, "h3");
+    const total      = pregCount + postCount;
+    const countEl    = document.getElementById("hub-results-count");
+    const emptyEl    = document.getElementById("hub-empty");
+    if (countEl) countEl.textContent = query ? `${total} question${total === 1 ? "" : "s"} match "${query}"` : "";
+    if (emptyEl) emptyEl.hidden = total !== 0;
+
+    const trustedPanel = document.getElementById("hub-trusted-search");
+    if (trustedPanel) {
+      const show = !!query && total === 0;
+      trustedPanel.hidden = !show;
+      if (show) {
+        trustedPanel.dataset.pendingQuery = query;
+        const resultsEl = trustedPanel.querySelector(".trusted-results");
+        if (resultsEl) resultsEl.innerHTML = "";
+        const btn = trustedPanel.querySelector("button");
+        if (btn) btn.textContent = `Search trusted sources for "${query}"`;
+      }
+    }
+  }
+
+  wireAccordion("hub-list-pregnancy");
+  wireAccordion("hub-list-postpartum");
+  wireAccordion("app-list-stage");
+
+  document.getElementById("hub-search-input")?.addEventListener("input", (e) => {
+    renderMarketingHub(e.target.value.trim());
+  });
+  renderMarketingHub("");
+
+  document.getElementById("app-search-input")?.addEventListener("input", () => {
+    renderHub("app-search-input", "app-list-stage", "app-results-count", "app-empty", "app-trusted-search", "h2");
+  });
+
+  function filterQuestionsByWord(word) {
+    const input = document.getElementById("app-search-input");
+    if (input) {
+      input.value = word;
+      renderHub("app-search-input", "app-list-stage", "app-results-count", "app-empty", "app-trusted-search", "h2");
+    }
+  }
+
+  // Chips
+  const CHIP_WORDS_PREGNANT   = ["nausea", "cramping", "exhausted", "birth", "emotions", "movement"];
+  const CHIP_WORDS_POSTPARTUM = ["crying", "feeding", "bonding", "exhausted", "bleeding", "mood"];
+
+  function renderChips() {
+    const chipRow = document.getElementById("app-question-chips");
+    if (!chipRow) return;
+    const words = state.stage === "postpartum" ? CHIP_WORDS_POSTPARTUM : CHIP_WORDS_PREGNANT;
+    chipRow.innerHTML = words.map((w) => `<button class="chip" type="button">${escapeHtml(w)}</button>`).join("");
+    chipRow.querySelectorAll(".chip").forEach((btn) => {
+      btn.addEventListener("click", () => filterQuestionsByWord(btn.textContent));
+    });
+  }
+
+  // Ask forms
+  function wireAskForm(formId, inputId, toApp) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const value = document.getElementById(inputId)?.value.trim();
+      if (toApp) launchApp();
+      openPanel("companion");
+      if (value) filterQuestionsByWord(value);
+    });
+  }
+  wireAskForm("hero-ask-form", "hero-ask-input", true);
+  wireAskForm("home-ask-form", "home-ask-input", false);
+
   /* ---------------------------------------------------
-     5b. TRUSTED-SOURCE WEB SEARCH (calls /api/search)
+     11. TRUSTED-SOURCE SEARCH
      --------------------------------------------------- */
   async function runTrustedSearch(panelId) {
-    const panel = document.getElementById(panelId);
+    const panel     = document.getElementById(panelId);
     const resultsEl = panel.querySelector(".trusted-results");
-    const query = panel.dataset.pendingQuery || "";
-    if (!query) return;
+    const rawQuery  = panel.dataset.pendingQuery || "";
+    if (!rawQuery) return;
 
+    // Append stage context so Google returns stage-relevant results
+    const contextualQuery = `${rawQuery} ${SEARCH_CONTEXT[state.stage] || "pregnancy"}`;
     resultsEl.innerHTML = `<p class="trusted-search__status">Searching trusted sources&hellip;</p>`;
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      const response = await fetch(`/api/search?q=${encodeURIComponent(contextualQuery)}`);
+      const data     = await response.json();
 
       if (!response.ok) {
-        resultsEl.innerHTML = `<p class="trusted-card__error">${escapeHtml(data.error || "Search failed. Please try again.")}</p>`;
+        resultsEl.innerHTML = `<p class="trusted-card__error">${escapeHtml(data.error || "Search failed.")}</p>`;
         return;
       }
-
       if (!data.best && (!data.results || data.results.length === 0)) {
-        resultsEl.innerHTML = `<p class="trusted-search__status">No trusted sources matched that search. Try different words, or ask your midwife or doctor directly.</p>`;
+        resultsEl.innerHTML = `<p class="trusted-search__status">No trusted sources matched. Try different words, or ask your midwife or doctor directly.</p>`;
         return;
       }
 
-      const tierLabel = (tier) => (tier === "clinical" ? "Medically reviewed" : "Trusted community source");
-      const excerptLabel = (source) =>
-        source === "article"
-          ? "Relevant excerpt pulled directly from the article"
-          : "Search summary (full excerpt unavailable for this page)";
+      const tierLabel    = (tier) => tier === "clinical" ? "Medically reviewed" : "Trusted source";
+      const excerptLabel = (src)  => src === "article" ? "Excerpt from article" : "Search summary";
 
       const bestHtml = data.best ? `
         <div class="trusted-card trusted-card--best">
@@ -302,7 +683,7 @@
           <h4>${escapeHtml(data.best.title)}</h4>
           <p>${escapeHtml(data.best.snippet)}</p>
           <p class="trusted-card__excerpt-label">${escapeHtml(excerptLabel(data.best.excerptSource))}</p>
-          <a class="trusted-card__link" href="${escapeHtml(data.best.link)}" target="_blank" rel="noopener noreferrer">Read the full article on ${escapeHtml(data.best.source)} →</a>
+          <a class="trusted-card__link" href="${escapeHtml(data.best.link)}" target="_blank" rel="noopener noreferrer">Read full article on ${escapeHtml(data.best.source)} →</a>
         </div>` : "";
 
       const restHtml = (data.results || []).map((r) => `
@@ -310,135 +691,30 @@
           <span class="trusted-card__source">${escapeHtml(tierLabel(r.tier))} · ${escapeHtml(r.source)}</span>
           <h4>${escapeHtml(r.title)}</h4>
           <p>${escapeHtml(r.snippet)}</p>
-          <a class="trusted-card__link" href="${escapeHtml(r.link)}" target="_blank" rel="noopener noreferrer">Read the full article on ${escapeHtml(r.source)} →</a>
+          <a class="trusted-card__link" href="${escapeHtml(r.link)}" target="_blank" rel="noopener noreferrer">Read full article on ${escapeHtml(r.source)} →</a>
         </div>`).join("");
 
-      const restLabel = (data.results || []).length
-        ? `<p class="trusted-search__more-label">More from trusted sources</p>` : "";
+      const moreLabel = (data.results || []).length ? `<p class="trusted-search__more-label">More from trusted sources</p>` : "";
 
-      resultsEl.innerHTML = bestHtml + restLabel + restHtml + `
-        <p class="trusted-search__disclosure">Results come from trusted medical and pregnancy organizations. We never store or share what you search.</p>`;
+      resultsEl.innerHTML = bestHtml + moreLabel + restHtml + `
+        <p class="trusted-search__disclosure">Results from trusted medical and pregnancy organisations. We never store or share what you search.</p>`;
     } catch (err) {
-      resultsEl.innerHTML = `<p class="trusted-card__error">Something went wrong reaching the search service. Please try again.</p>`;
+      resultsEl.innerHTML = `<p class="trusted-card__error">Something went wrong. Please try again.</p>`;
     }
   }
 
-  document.getElementById("hub-trusted-search-btn").addEventListener("click", () => runTrustedSearch("hub-trusted-search"));
-  document.getElementById("app-trusted-search-btn").addEventListener("click", () => runTrustedSearch("app-trusted-search"));
-
-  // Marketing page hub
-  wireAccordion("hub-list-pregnancy");
-  wireAccordion("hub-list-postpartum");
-  document.getElementById("hub-search-input").addEventListener("input", () => {
-    renderHub("hub-search-input", "hub-list-pregnancy", "hub-list-postpartum", "hub-results-count", "hub-empty", "h3");
-  });
-  renderHub("hub-search-input", "hub-list-pregnancy", "hub-list-postpartum", "hub-results-count", "hub-empty", "h3");
-
-  // App Companion tab hub
-  wireAccordion("app-list-pregnancy");
-  wireAccordion("app-list-postpartum");
-  document.getElementById("app-search-input").addEventListener("input", () => {
-    renderHub("app-search-input", "app-list-pregnancy", "app-list-postpartum", "app-results-count", "app-empty", "h2");
-  });
-
-  function filterQuestionsByWord(word) {
-    const input = document.getElementById("app-search-input");
-    input.value = word;
-    renderHub("app-search-input", "app-list-pregnancy", "app-list-postpartum", "app-results-count", "app-empty", "h2");
-  }
-
-  // Suggested question chips inside Companion tab
-  const CHIP_WORDS = ["crying", "exhausted", "bonding", "feeding", "birth fear", "mood"];
-  const chipRow = document.getElementById("app-question-chips");
-  chipRow.innerHTML = CHIP_WORDS.map((w) => `<button class="chip" type="button">${escapeHtml(w)}</button>`).join("");
-  chipRow.addEventListener("click", (e) => {
-    const btn = e.target.closest(".chip");
-    if (!btn) return;
-    filterQuestionsByWord(btn.textContent);
-  });
+  document.getElementById("hub-trusted-search-btn")?.addEventListener("click", () => runTrustedSearch("hub-trusted-search"));
+  document.getElementById("app-trusted-search-btn")?.addEventListener("click", () => runTrustedSearch("app-trusted-search"));
 
   /* ---------------------------------------------------
-     6. ASK WIDGETS (hero + home) -> jump to Companion hub
-     --------------------------------------------------- */
-  function wireAskForm(formId, inputId, toApp) {
-    const form = document.getElementById(formId);
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const value = document.getElementById(inputId).value.trim();
-      if (toApp) {
-        showApp();
-      }
-      openPanel("companion");
-      filterQuestionsByWord(value);
-    });
-  }
-  wireAskForm("hero-ask-form", "hero-ask-input", true);
-  wireAskForm("home-ask-form", "home-ask-input", false);
-
-  /* ---------------------------------------------------
-     7. HOME TAB — greeting + checklist
-     --------------------------------------------------- */
-  function renderHome() {
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-    document.getElementById("home-greeting").textContent = `${greeting}, ${state.name}`;
-
-    document.querySelectorAll("#home-checklist input[type=checkbox]").forEach((box) => {
-      const id = box.dataset.checkId;
-      box.checked = !!state.checklist[id];
-      box.onchange = () => {
-        state.checklist[id] = box.checked;
-        saveState();
-      };
-    });
-  }
-
-  /* ---------------------------------------------------
-     8. PULSE TAB — stats + 7-day bar chart
-     --------------------------------------------------- */
-  function renderPulse() {
-    checkForNewDay();
-    const recent = state.history.slice(0, 6);
-    const sleepVals = [state.today.sleep, ...recent.map((d) => d.sleep)];
-    const waterVals = [state.today.water, ...recent.map((d) => d.water)];
-    const feedTotal = state.today.feedings + recent.reduce((sum, d) => sum + d.feedings, 0);
-    const moodVals = [state.today.mood, ...recent.map((d) => d.mood)].filter((m) => m !== null && m !== undefined);
-
-    const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
-
-    document.getElementById("stat-avg-mood").textContent = moodVals.length ? avg(moodVals).toFixed(1) + " / 5" : "—";
-    document.getElementById("stat-avg-sleep").textContent = avg(sleepVals).toFixed(1) + "h";
-    document.getElementById("stat-avg-water").textContent = avg(waterVals).toFixed(1) + " cups";
-    document.getElementById("stat-feedings").textContent = String(feedTotal);
-
-    const moodHistory = [];
-    const recentOldestFirst = recent.slice(0, 6).reverse();
-    recentOldestFirst.forEach((d) => moodHistory.push(d.mood ?? 3));
-    while (moodHistory.length < 6) moodHistory.unshift(3);
-    moodHistory.push(state.today.mood ?? 3);
-
-    const dayLabels = ["6d ago", "5d", "4d", "3d", "2d", "Yest.", "Today"];
-    const chart = document.getElementById("mood-bar-chart");
-    chart.innerHTML = moodHistory.map((val, i) => {
-      const clamped = Math.max(1, Math.min(5, val));
-      const pct = (clamped / 5) * 100;
-      return `
-        <div class="bar-chart__col">
-          <div class="bar-chart__bar" style="height:${pct}%"></div>
-          <span class="bar-chart__day">${dayLabels[i]}</span>
-        </div>`;
-    }).join("");
-  }
-
-  /* ---------------------------------------------------
-     9. VILLAGE TAB
+     12. VILLAGE TAB
      --------------------------------------------------- */
   function renderVillage() {
     const memberList = document.getElementById("village-members");
     memberList.innerHTML = state.village.members.map((m) => `
       <li data-id="${m.id}">
         <span><span class="item-title">${escapeHtml(m.name)}</span><span class="item-sub"> · ${escapeHtml(m.role)}</span></span>
-        <button class="item-remove" data-remove-member="${m.id}" aria-label="Remove ${escapeHtml(m.name)}">✕</button>
+        <button class="item-remove" data-remove-member="${m.id}">✕</button>
       </li>`).join("") || `<li><span class="item-sub">No one added yet.</span></li>`;
 
     const taskList = document.getElementById("village-tasks");
@@ -449,31 +725,22 @@
           ${escapeHtml(t.label)}
           <span class="task-assignee">${escapeHtml(t.assignee)}</span>
         </span>
-        <button class="item-remove" data-remove-task="${t.id}" aria-label="Remove task">✕</button>
+        <button class="item-remove" data-remove-task="${t.id}">✕</button>
       </li>`).join("") || `<li><span class="item-sub">No shared tasks yet.</span></li>`;
 
     memberList.querySelectorAll("[data-remove-member]").forEach((btn) => {
-      btn.onclick = () => {
-        state.village.members = state.village.members.filter((m) => m.id !== btn.dataset.removeMember);
-        saveState(); renderVillage();
-      };
+      btn.onclick = () => { state.village.members = state.village.members.filter((m) => m.id !== btn.dataset.removeMember); saveState(); renderVillage(); };
     });
     taskList.querySelectorAll("[data-toggle-task]").forEach((box) => {
-      box.onchange = () => {
-        const t = state.village.tasks.find((t) => t.id === box.dataset.toggleTask);
-        if (t) { t.done = box.checked; saveState(); renderVillage(); }
-      };
+      box.onchange = () => { const t = state.village.tasks.find((t) => t.id === box.dataset.toggleTask); if (t) { t.done = box.checked; saveState(); renderVillage(); } };
     });
     taskList.querySelectorAll("[data-remove-task]").forEach((btn) => {
-      btn.onclick = () => {
-        state.village.tasks = state.village.tasks.filter((t) => t.id !== btn.dataset.removeTask);
-        saveState(); renderVillage();
-      };
+      btn.onclick = () => { state.village.tasks = state.village.tasks.filter((t) => t.id !== btn.dataset.removeTask); saveState(); renderVillage(); };
     });
   }
 
   /* ---------------------------------------------------
-     10. CARE TAB — contacts, appointments, diary
+     13. CARE TAB
      --------------------------------------------------- */
   function renderCare() {
     const contactList = document.getElementById("care-contacts");
@@ -481,8 +748,8 @@
       <li data-id="${c.id}">
         <span><span class="item-title">${escapeHtml(c.name)}</span><span class="item-sub"> · ${escapeHtml(c.role)} · ${escapeHtml(c.phone)}</span></span>
         <span>
-          <a class="icon-btn" style="text-decoration:none;" href="tel:${escapeHtml(c.phone)}" aria-label="Call ${escapeHtml(c.name)}">📞</a>
-          <button class="item-remove" data-remove-contact="${c.id}" aria-label="Remove contact">✕</button>
+          <a class="icon-btn" style="text-decoration:none;font-size:1rem;" href="tel:${escapeHtml(c.phone)}" aria-label="Call ${escapeHtml(c.name)}">📞</a>
+          <button class="item-remove" data-remove-contact="${c.id}">✕</button>
         </span>
       </li>`).join("") || `<li><span class="item-sub">No contacts yet.</span></li>`;
 
@@ -490,73 +757,73 @@
     apptList.innerHTML = state.care.appointments.map((a) => `
       <li data-id="${a.id}">
         <span><span class="item-title">${escapeHtml(a.title)}</span><span class="item-sub"> · ${escapeHtml(a.date)} ${escapeHtml(a.time)}</span></span>
-        <button class="item-remove" data-remove-appt="${a.id}" aria-label="Remove appointment">✕</button>
+        <button class="item-remove" data-remove-appt="${a.id}">✕</button>
       </li>`).join("") || `<li><span class="item-sub">No appointments yet.</span></li>`;
 
     const diaryList = document.getElementById("care-diary");
     diaryList.innerHTML = state.care.diary.map((d) => `
       <li data-id="${d.id}">
         <span><span class="item-title">${escapeHtml(d.title)}</span><span class="item-sub"> · ${escapeHtml(d.date)}</span></span>
-        <button class="item-remove" data-remove-diary="${d.id}" aria-label="Delete entry">✕</button>
+        <button class="item-remove" data-remove-diary="${d.id}">✕</button>
       </li>`).join("") || `<li><span class="item-sub">No entries yet — tap + to write one.</span></li>`;
 
     contactList.querySelectorAll("[data-remove-contact]").forEach((btn) => {
-      btn.onclick = () => {
-        state.care.contacts = state.care.contacts.filter((c) => c.id !== btn.dataset.removeContact);
-        saveState(); renderCare();
-      };
+      btn.onclick = () => { state.care.contacts = state.care.contacts.filter((c) => c.id !== btn.dataset.removeContact); saveState(); renderCare(); };
     });
     apptList.querySelectorAll("[data-remove-appt]").forEach((btn) => {
-      btn.onclick = () => {
-        state.care.appointments = state.care.appointments.filter((a) => a.id !== btn.dataset.removeAppt);
-        saveState(); renderCare();
-      };
+      btn.onclick = () => { state.care.appointments = state.care.appointments.filter((a) => a.id !== btn.dataset.removeAppt); saveState(); renderCare(); };
     });
     diaryList.querySelectorAll("[data-remove-diary]").forEach((btn) => {
-      btn.onclick = () => {
-        state.care.diary = state.care.diary.filter((d) => d.id !== btn.dataset.removeDiary);
-        saveState(); renderCare();
-      };
+      btn.onclick = () => { state.care.diary = state.care.diary.filter((d) => d.id !== btn.dataset.removeDiary); saveState(); renderCare(); };
     });
   }
 
   /* ---------------------------------------------------
-     11. LOGS TAB — counters + history
+     14. LOGS TAB — stage-aware counters
      --------------------------------------------------- */
   function renderLogs() {
     checkForNewDay();
-    document.getElementById("water-count").textContent = String(state.today.water);
+    document.getElementById("water-count").textContent   = String(state.today.water);
     document.getElementById("feeding-count").textContent = String(state.today.feedings);
 
+    // Sleep input
+    const sleepInput = document.getElementById("sleep-input");
+    if (sleepInput) sleepInput.value = state.today.sleep || "";
+
     const history = document.getElementById("logs-history");
-    history.innerHTML = state.history.map((d) => `
-      <div class="history-card">
-        <span class="history-card__date">${escapeHtml(d.date)}</span>
-        <span class="history-card__stats">💧 ${d.water} · 🍼 ${d.feedings} · 😴 ${d.sleep}h</span>
-      </div>`).join("") || `<p class="muted-text">No history yet — it builds up automatically each day.</p>`;
+    history.innerHTML = state.history.map((d) => {
+      const mood = MOODS.find((m) => m.value === d.mood);
+      return `
+        <div class="history-card">
+          <span class="history-card__date">${escapeHtml(d.date)}</span>
+          <span class="history-card__stats">
+            ${mood ? mood.emoji : "—"} · 💧${d.water} · 🍼${d.feedings} · 😴${d.sleep || 0}h
+          </span>
+        </div>`;
+    }).join("") || `<p class="muted-text">No history yet — builds up automatically each day.</p>`;
   }
 
   document.getElementById("water-increment").addEventListener("click", () => {
-    checkForNewDay();
-    state.today.water += 1;
-    saveState();
-    renderLogs();
-    renderPulse();
+    checkForNewDay(); state.today.water++; saveState(); renderLogs(); renderPulse();
   });
   document.getElementById("feeding-increment").addEventListener("click", () => {
-    checkForNewDay();
-    state.today.feedings += 1;
-    saveState();
-    renderLogs();
-    renderPulse();
+    checkForNewDay(); state.today.feedings++; saveState(); renderLogs(); renderPulse();
+  });
+
+  // Sleep logging
+  document.getElementById("sleep-save")?.addEventListener("click", () => {
+    const val = parseFloat(document.getElementById("sleep-input")?.value);
+    if (!isNaN(val) && val >= 0 && val <= 24) {
+      state.today.sleep = val; saveState(); renderLogs(); renderPulse();
+    }
   });
 
   /* ---------------------------------------------------
-     12. SHARED MODAL — used for all "+" add actions
+     15. MODAL — shared for all + add actions
      --------------------------------------------------- */
-  const overlay = document.getElementById("modal-overlay");
+  const overlay    = document.getElementById("modal-overlay");
   const modalTitle = document.getElementById("modal-title");
-  const modalForm = document.getElementById("modal-form");
+  const modalForm  = document.getElementById("modal-form");
 
   function openModal(title, fieldsHtml, onSubmit) {
     modalTitle.textContent = title;
@@ -567,20 +834,12 @@
       </div>`;
     overlay.hidden = false;
     document.getElementById("modal-cancel-btn").onclick = closeModal;
-    modalForm.onsubmit = (e) => {
-      e.preventDefault();
-      onSubmit(new FormData(modalForm));
-      closeModal();
-    };
+    modalForm.onsubmit = (e) => { e.preventDefault(); onSubmit(new FormData(modalForm)); closeModal(); };
     const firstInput = modalForm.querySelector("input, textarea");
     if (firstInput) firstInput.focus();
   }
 
-  function closeModal() {
-    overlay.hidden = true;
-    modalForm.innerHTML = "";
-  }
-
+  function closeModal() { overlay.hidden = true; modalForm.innerHTML = ""; }
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
 
   document.getElementById("add-member-btn").addEventListener("click", () => {
@@ -588,12 +847,9 @@
       <label for="f-name">Name</label>
       <input type="text" id="f-name" name="name" required />
       <label for="f-role">Role</label>
-      <select id="f-role" name="role">
-        <option>Partner</option><option>Family</option><option>Friend</option>
-      </select>`, (data) => {
-      state.village.members.push({ id: "m" + Date.now(), name: data.get("name"), role: data.get("role") });
-      saveState(); renderVillage();
-    });
+      <select id="f-role" name="role"><option>Partner</option><option>Family</option><option>Friend</option></select>`,
+      (data) => { state.village.members.push({ id: "m" + Date.now(), name: data.get("name"), role: data.get("role") }); saveState(); renderVillage(); }
+    );
   });
 
   document.getElementById("add-task-btn").addEventListener("click", () => {
@@ -602,53 +858,46 @@
       <label for="f-label">Task</label>
       <input type="text" id="f-label" name="label" required placeholder="e.g. Pick up prescription" />
       <label for="f-assignee">Assign to</label>
-      <select id="f-assignee" name="assignee">${options}</select>`, (data) => {
-      state.village.tasks.push({ id: "t" + Date.now(), label: data.get("label"), assignee: data.get("assignee"), done: false });
-      saveState(); renderVillage();
-    });
+      <select id="f-assignee" name="assignee">${options || '<option>Unassigned</option>'}</select>`,
+      (data) => { state.village.tasks.push({ id: "t" + Date.now(), label: data.get("label"), assignee: data.get("assignee"), done: false }); saveState(); renderVillage(); }
+    );
   });
 
   document.getElementById("add-contact-btn").addEventListener("click", () => {
     openModal("Add speed dial contact", `
-      <label for="f-cname">Name</label>
-      <input type="text" id="f-cname" name="name" required />
-      <label for="f-crole">Role</label>
-      <input type="text" id="f-crole" name="role" placeholder="e.g. Midwife, GP" />
-      <label for="f-cphone">Phone number</label>
-      <input type="tel" id="f-cphone" name="phone" required />`, (data) => {
-      state.care.contacts.push({ id: "c" + Date.now(), name: data.get("name"), role: data.get("role") || "Contact", phone: data.get("phone") });
-      saveState(); renderCare();
-    });
+      <label for="f-cname">Name</label><input type="text" id="f-cname" name="name" required />
+      <label for="f-crole">Role</label><input type="text" id="f-crole" name="role" placeholder="e.g. Midwife, GP" />
+      <label for="f-cphone">Phone number</label><input type="tel" id="f-cphone" name="phone" required />`,
+      (data) => { state.care.contacts.push({ id: "c" + Date.now(), name: data.get("name"), role: data.get("role") || "Contact", phone: data.get("phone") }); saveState(); renderCare(); }
+    );
   });
 
   document.getElementById("add-appointment-btn").addEventListener("click", () => {
     openModal("Add appointment", `
-      <label for="f-atitle">What's it for?</label>
-      <input type="text" id="f-atitle" name="title" required placeholder="e.g. 6-week checkup" />
-      <label for="f-adate">Date</label>
-      <input type="text" id="f-adate" name="date" placeholder="e.g. Tue, 24 Jun" />
-      <label for="f-atime">Time</label>
-      <input type="text" id="f-atime" name="time" placeholder="e.g. 10:30 AM" />`, (data) => {
-      state.care.appointments.push({ id: "a" + Date.now(), title: data.get("title"), date: data.get("date"), time: data.get("time") });
-      saveState(); renderCare();
-    });
+      <label for="f-atitle">What's it for?</label><input type="text" id="f-atitle" name="title" required placeholder="e.g. 28-week scan" />
+      <label for="f-adate">Date</label><input type="text" id="f-adate" name="date" placeholder="e.g. Tue, 24 Jun" />
+      <label for="f-atime">Time</label><input type="text" id="f-atime" name="time" placeholder="e.g. 10:30 AM" />`,
+      (data) => { state.care.appointments.push({ id: "a" + Date.now(), title: data.get("title"), date: data.get("date"), time: data.get("time") }); saveState(); renderCare(); }
+    );
   });
 
   document.getElementById("new-diary-btn").addEventListener("click", () => {
     openModal("New diary entry", `
       <label for="f-dcontent">What's on your mind?</label>
-      <textarea id="f-dcontent" name="content" required placeholder="Today was..."></textarea>`, (data) => {
-      const content = data.get("content").trim();
-      if (!content) return;
-      const title = content.split(/\s+/).slice(0, 3).join(" ");
-      const date = new Date().toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-      state.care.diary.unshift({ id: "d" + Date.now(), title, content, date });
-      saveState(); renderCare();
-    });
+      <textarea id="f-dcontent" name="content" required placeholder="Today was..."></textarea>`,
+      (data) => {
+        const content = data.get("content").trim();
+        if (!content) return;
+        const title = content.split(/\s+/).slice(0, 3).join(" ");
+        const date  = new Date().toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        state.care.diary.unshift({ id: "d" + Date.now(), title, content, date });
+        saveState(); renderCare();
+      }
+    );
   });
 
   /* ---------------------------------------------------
-     13. INITIAL RENDER
+     16. INITIAL RENDER
      --------------------------------------------------- */
   function renderAll() {
     renderHome();
@@ -656,7 +905,15 @@
     renderVillage();
     renderCare();
     renderLogs();
+    renderChips();
+    renderHub("app-search-input", "app-list-stage", "app-results-count", "app-empty", "app-trusted-search", "h2");
   }
 
-  renderAll();
+  // Start
+  if (state.onboarded) {
+    showApp();
+  } else {
+    showMarketing();
+  }
+
 })();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nurture — A Calm Companion for Pregnancy &amp; Postpartum</title>
-  <meta name="description" content="Nurture answers the questions every pregnant and postpartum mother actually asks: is my baby okay, am I okay, am I doing this right. Private mood, sleep and feeding tracking that stays on your device." />
+  <meta name="description" content="Nurture answers the questions every pregnant and postpartum mother actually asks. Private mood, sleep and feeding tracking that stays on your device." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
@@ -47,96 +47,77 @@
             stays on your own device.
           </p>
           <div class="hero__actions">
-            <a href="#download" class="btn btn--ghost">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M12 3v12m0 0l-4-4m4 4l4-4M5 21h14'/%3E%3C/svg%3E" alt="Download icon" class="btn__icon" />
-              Download Mobile App
-            </a>
+            <a href="#download" class="btn btn--ghost">Download Mobile App</a>
             <a href="#" id="hero-launch-app" class="btn btn--primary">
-              Launch Web App Utility
-              <span aria-hidden="true">➔</span>
+              Launch Web App ➔
             </a>
           </div>
 
-          <!-- PREVIEW SEARCH WIDGET -->
           <div class="ask-widget" role="search">
             <p class="ask-widget__label">Is This Normal? — Ask anything</p>
             <form id="hero-ask-form" class="ask-widget__form">
-              <label for="hero-ask-input" class="sr-only">Type a question about pregnancy or postpartum</label>
-              <input
-                type="text"
-                id="hero-ask-input"
-                placeholder="e.g. Is week 4 cramping normal?"
-                autocomplete="off"
-              />
+              <label for="hero-ask-input" class="sr-only">Ask a question</label>
+              <input type="text" id="hero-ask-input" placeholder="e.g. Is cramping at week 4 normal?" autocomplete="off" />
               <button type="submit">Ask</button>
             </form>
-            <p class="ask-widget__hint">Try: fatigue, crying, feeding, bonding, birth fear&hellip;</p>
+            <p class="ask-widget__hint">Try: nausea, exhausted, bonding, feeding, birth fear&hellip;</p>
           </div>
         </div>
       </section>
 
-      <!-- VALUE HIGHLIGHT CARDS -->
+      <!-- FEATURES -->
       <section class="features" id="features" aria-labelledby="features-heading">
         <div class="wrap">
           <h2 id="features-heading">Three quiet spaces, built around how you actually feel</h2>
           <div class="features__grid">
             <article class="feature-card">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext x='2' y='18' font-size='20'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E" alt="Brain icon representing mind and emotional tracking" class="feature-card__icon" />
+              <div class="feature-card__icon">🧠</div>
               <h3>My Mind &amp; Emotions</h3>
-              <p>Stressed, overthinking, lonely, overloaded — named in plain words, not clinical labels, so you can check in honestly in seconds.</p>
+              <p>Stressed, overthinking, lonely, overloaded — named in plain words, not clinical labels.</p>
             </article>
             <article class="feature-card">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext x='2' y='18' font-size='20'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" alt="Lightning bolt icon representing body and energy tracking" class="feature-card__icon" />
+              <div class="feature-card__icon">⚡</div>
               <h3>My Body &amp; Energy</h3>
-              <p>Drained, foggy, fragile, or strong — each one opens a real, doable action for right now, not another thing to feel behind on.</p>
+              <p>Drained, foggy, fragile, or strong — each opens a real, doable action for right now.</p>
             </article>
             <article class="feature-card">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext x='2' y='18' font-size='20'%3E%F0%9F%A4%9D%3C/text%3E%3C/svg%3E" alt="Handshake icon representing village and support coordination" class="feature-card__icon" />
+              <div class="feature-card__icon">🤝</div>
               <h3>Your Village</h3>
-              <p>Private task coordination with the people actually helping you — no account required for them, no data leaving your circle.</p>
+              <p>Private task coordination with the people actually helping you. No data leaves your circle.</p>
             </article>
           </div>
         </div>
       </section>
 
-      <!-- QUESTION HUB (SEO) -->
+      <!-- QUESTION HUB -->
       <section class="hub" id="hub" aria-labelledby="hub-heading">
         <div class="wrap">
           <p class="eyebrow">The 18 questions every mother asks</p>
           <h2 id="hub-heading">Search the questions you've been carrying alone</h2>
-          <p class="hub__sub">
-            Real worries from pregnancy and the fourth trimester, answered in plain language.
-            Type a word below, or browse by topic.
-          </p>
+          <p class="hub__sub">Real worries from pregnancy and the fourth trimester, answered in plain language.</p>
 
           <div class="hub__search">
             <label for="hub-search-input" class="sr-only">Search questions</label>
-            <input type="text" id="hub-search-input" placeholder="Search: e.g. crying, exhausted, bonding, eating&hellip;" autocomplete="off" />
+            <input type="text" id="hub-search-input" placeholder="Search: e.g. crying, exhausted, bonding&hellip;" autocomplete="off" />
           </div>
 
           <div id="hub-results-count" class="hub__count" aria-live="polite"></div>
 
-          <h3 class="hub__group-label">Pregnancy</h3>
+          <h3 class="hub__group-label">During Pregnancy</h3>
           <div id="hub-list-pregnancy" class="hub__list"></div>
 
-          <h3 class="hub__group-label">Postpartum &amp; Newborn</h3>
+          <h3 class="hub__group-label">After Birth</h3>
           <div id="hub-list-postpartum" class="hub__list"></div>
 
-          <p id="hub-empty" class="hub__empty" hidden>No questions match that search — try a different word.</p>
+          <p id="hub-empty" class="hub__empty" hidden>No questions match — try a different word.</p>
 
           <div id="hub-trusted-search" class="trusted-search" hidden>
-            <button type="button" id="hub-trusted-search-btn" class="btn btn--ghost">
-              Search trusted medical sources for this
-            </button>
+            <button type="button" id="hub-trusted-search-btn" class="btn btn--ghost">Search trusted medical sources for this</button>
             <div id="hub-trusted-results" class="trusted-results" aria-live="polite"></div>
           </div>
 
           <blockquote class="hub__hook">
-            <p>
-              The deepest maternal questions are never about what app to download. They are simply:
-              &ldquo;Is my baby okay? Am I okay? Am I doing this right?&rdquo; Our platform is built
-              precisely to echo those truths back to you, with zero tracking noise.
-            </p>
+            <p>&ldquo;Is my baby okay? Am I okay? Am I doing this right?&rdquo; Nurture is built to echo those truths back to you, with zero tracking noise.</p>
           </blockquote>
         </div>
       </section>
@@ -145,7 +126,7 @@
       <section class="download" id="download" aria-labelledby="download-heading">
         <div class="wrap download__inner">
           <h2 id="download-heading">Take it with you</h2>
-          <p>The mobile app keeps everything from the web utility, plus quiet reminders and offline access in the hospital bag, the nursery, the car.</p>
+          <p>The mobile app keeps everything from the web, plus quiet reminders and offline access.</p>
           <div class="hero__actions">
             <a href="#" class="btn btn--ghost">Download for iOS</a>
             <a href="#" class="btn btn--ghost">Download for Android</a>
@@ -167,12 +148,20 @@
   </div>
 
   <!-- =====================================================
+       ONBOARDING VIEW
+       ===================================================== -->
+  <div id="onboard-view" class="view" hidden>
+    <div class="onboard-shell">
+      <div id="onboard-content"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================
        WEB APP DASHBOARD
        ===================================================== -->
   <div id="app-view" class="view" hidden>
     <div class="app-shell">
 
-      <!-- DESKTOP SIDEBAR / MOBILE BOTTOM NAV -->
       <nav class="app-nav" aria-label="App sections">
         <a href="#" class="app-nav__brand">
           <span aria-hidden="true">🌿</span>
@@ -203,48 +192,55 @@
 
       <main class="app-main">
 
-        <!-- TAB 1: HOME -->
+        <!-- HOME -->
         <section class="app-panel is-active" id="panel-home" data-panel="home">
           <header class="panel-header">
-            <h1 id="home-greeting">Good morning</h1>
-            <p>Here's a quiet space to check in with yourself today.</p>
+            <h1 id="home-greeting">Good morning 🌿</h1>
+            <span id="app-stage-label" class="stage-badge"></span>
           </header>
 
-          <div class="quick-cards">
-            <button class="quick-card quick-card--mind" data-open-panel="companion" data-preset-tag="mind">
-              <span class="quick-card__emoji" aria-hidden="true">🧠</span>
-              <span>My Mind &amp; Emotions</span>
-            </button>
-            <button class="quick-card quick-card--body" data-open-panel="companion" data-preset-tag="body">
-              <span class="quick-card__emoji" aria-hidden="true">⚡</span>
-              <span>My Body &amp; Energy</span>
-            </button>
+          <!-- Mood check-in -->
+          <div class="card">
+            <h2>How are you feeling right now?</h2>
+            <p class="muted-text">Tap once — this feeds your Pulse trends.</p>
+            <div class="mood-row" id="mood-row"></div>
           </div>
 
+          <!-- Ask anything -->
           <div class="card">
             <h2>Is This Normal? — Ask anything</h2>
             <form id="home-ask-form" class="ask-widget__form">
               <label for="home-ask-input" class="sr-only">Ask a question</label>
-              <input type="text" id="home-ask-input" placeholder="Type how you're feeling, or what's worrying you&hellip;" autocomplete="off" />
+              <input type="text" id="home-ask-input" placeholder="Type what's worrying you&hellip;" autocomplete="off" />
               <button type="submit">Ask</button>
             </form>
           </div>
 
+          <!-- Checklist -->
           <div class="card">
-            <h2>Today's Care Checklist</h2>
-            <ul class="checklist" id="home-checklist">
-              <li><label><input type="checkbox" data-check-id="feed" /> Feed Baby</label></li>
-              <li><label><input type="checkbox" data-check-id="water" /> Drink Water</label></li>
-              <li><label><input type="checkbox" data-check-id="rest" /> Take a 10-minute Rest</label></li>
-            </ul>
+            <div class="card__header-row">
+              <h2>Today's Checklist</h2>
+              <button class="icon-btn" id="add-checklist-btn" aria-label="Add item">+</button>
+            </div>
+            <ul class="checklist" id="home-checklist"></ul>
+            <div class="suggest-section">
+              <p class="suggest-label">Add a suggestion:</p>
+              <div class="chip-row" id="checklist-suggestions"></div>
+            </div>
+          </div>
+
+          <!-- Baby arrived transition — pregnant users only -->
+          <div class="card card--transition" id="baby-arrived-card" hidden>
+            <p>👶 <strong>Has your baby arrived?</strong> Tap below to switch your whole experience to your new mum journey.</p>
+            <button class="btn btn--primary btn--full" id="baby-arrived-btn">My baby is here ➔</button>
           </div>
         </section>
 
-        <!-- TAB 2: PULSE -->
+        <!-- PULSE -->
         <section class="app-panel" id="panel-pulse" data-panel="pulse">
           <header class="panel-header">
             <h1>Pulse</h1>
-            <p>A quiet look at your week — no extra noise, just the shape of it.</p>
+            <p>A quiet look at how your week has shaped up.</p>
           </header>
 
           <div class="card">
@@ -253,50 +249,50 @@
               <div class="stat"><span class="stat__value" id="stat-avg-mood">—</span><span class="stat__label">Avg mood</span></div>
               <div class="stat"><span class="stat__value" id="stat-avg-sleep">—</span><span class="stat__label">Avg sleep</span></div>
               <div class="stat"><span class="stat__value" id="stat-avg-water">—</span><span class="stat__label">Avg water</span></div>
-              <div class="stat"><span class="stat__value" id="stat-feedings">—</span><span class="stat__label">Feedings</span></div>
+              <div class="stat" data-stage-show="postpartum"><span class="stat__value" id="stat-feedings">—</span><span class="stat__label">Feedings</span></div>
             </div>
+            <p class="pulse-data-note muted-text" id="pulse-data-note"></p>
           </div>
 
           <div class="card">
-            <h2>7-Day Mood Log</h2>
-            <div class="bar-chart" id="mood-bar-chart" role="img" aria-label="Bar chart of mood over the last seven days"></div>
+            <h2>7-Day Mood</h2>
+            <div class="bar-chart" id="mood-bar-chart" role="img" aria-label="Mood bar chart for the last 7 days"></div>
+          </div>
+
+          <div class="card card--gentle">
+            <h2>Gentle Insight</h2>
+            <p id="pulse-insight" class="muted-text">Check in with your mood on the Home tab each day — your trends will appear here.</p>
           </div>
         </section>
 
-        <!-- TAB 3: COMPANION (full question hub) -->
+        <!-- COMPANION -->
         <section class="app-panel" id="panel-companion" data-panel="companion">
           <header class="panel-header">
             <h1>Is This Normal?</h1>
-            <p>Ask anything, or browse the questions other mothers ask most.</p>
+            <p>Questions answered for your stage of the journey.</p>
           </header>
 
           <div class="card">
             <div class="hub__search">
               <label for="app-search-input" class="sr-only">Search questions</label>
-              <input type="text" id="app-search-input" placeholder="Search: e.g. crying, exhausted, bonding, eating&hellip;" autocomplete="off" />
+              <input type="text" id="app-search-input" placeholder="Search questions&hellip;" autocomplete="off" />
             </div>
-            <div class="chip-row" id="app-question-chips" aria-label="Suggested questions"></div>
+            <div class="chip-row" id="app-question-chips"></div>
           </div>
 
           <div id="app-results-count" class="hub__count" aria-live="polite"></div>
 
-          <h2 class="hub__group-label">Pregnancy</h2>
-          <div id="app-list-pregnancy" class="hub__list"></div>
+          <div id="app-list-stage" class="hub__list"></div>
 
-          <h2 class="hub__group-label">Postpartum &amp; Newborn</h2>
-          <div id="app-list-postpartum" class="hub__list"></div>
-
-          <p id="app-empty" class="hub__empty" hidden>No questions match that search — try a different word.</p>
+          <p id="app-empty" class="hub__empty" hidden>No questions match — try a different word.</p>
 
           <div id="app-trusted-search" class="trusted-search" hidden>
-            <button type="button" id="app-trusted-search-btn" class="btn btn--ghost">
-              Search trusted medical sources for this
-            </button>
-            <div id="app-trusted-results" class="trusted-results" aria-live="polite"></div>
+            <button type="button" id="app-trusted-search-btn" class="btn btn--ghost">Search trusted sources for this</button>
+            <div class="trusted-results" aria-live="polite"></div>
           </div>
         </section>
 
-        <!-- TAB 4: VILLAGE -->
+        <!-- VILLAGE -->
         <section class="app-panel" id="panel-village" data-panel="village">
           <header class="panel-header">
             <h1>Your Village</h1>
@@ -320,18 +316,18 @@
           </div>
         </section>
 
-        <!-- TAB 5: CARE -->
+        <!-- CARE -->
         <section class="app-panel" id="panel-care" data-panel="care">
           <header class="panel-header">
             <h1>Care</h1>
-            <p>Quick access to contacts, appointments, and your private diary.</p>
+            <p>Contacts, appointments, and your private diary.</p>
           </header>
 
           <div class="care-grid">
             <div class="card card--accent-rose">
               <div class="card__header-row">
                 <h2>Speed Dial</h2>
-                <button class="icon-btn" id="add-contact-btn" aria-label="Add emergency contact">+</button>
+                <button class="icon-btn" id="add-contact-btn" aria-label="Add contact">+</button>
               </div>
               <ul class="plain-list" id="care-contacts"></ul>
             </div>
@@ -347,19 +343,19 @@
             <div class="card care-grid__diary">
               <div class="card__header-row">
                 <h2>Diary</h2>
-                <button class="icon-btn" id="new-diary-btn" aria-label="New diary entry">+</button>
+                <button class="icon-btn" id="new-diary-btn" aria-label="New entry">+</button>
               </div>
-              <p class="muted-text">A private space for your thoughts. Saved automatically, on this device only.</p>
+              <p class="muted-text">Private. Saved on this device only.</p>
               <ul class="plain-list" id="care-diary"></ul>
             </div>
           </div>
         </section>
 
-        <!-- TAB 6: LOGS -->
+        <!-- LOGS -->
         <section class="app-panel" id="panel-logs" data-panel="logs">
           <header class="panel-header">
             <h1>Logs</h1>
-            <p>Quick trackers, and your history below.</p>
+            <p>Track today, review your history below.</p>
           </header>
 
           <div class="card">
@@ -370,9 +366,9 @@
                   <span class="counter__value" id="water-count">0</span>
                   <span class="counter__label">cups today</span>
                 </div>
-                <button class="icon-btn icon-btn--primary" id="water-increment" aria-label="Add a cup of water">+</button>
+                <button class="icon-btn icon-btn--primary" id="water-increment" aria-label="Add a cup">+</button>
               </div>
-              <div class="counter">
+              <div class="counter" data-stage-show="postpartum">
                 <span class="counter__emoji" aria-hidden="true">🍼</span>
                 <div class="counter__text">
                   <span class="counter__value" id="feeding-count">0</span>
@@ -380,6 +376,14 @@
                 </div>
                 <button class="icon-btn icon-btn--primary" id="feeding-increment" aria-label="Log a feeding">+</button>
               </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Sleep last night</h2>
+            <div class="sleep-row">
+              <input type="number" id="sleep-input" min="0" max="24" step="0.5" placeholder="Hours" />
+              <button class="btn btn--ghost" id="sleep-save">Save</button>
             </div>
           </div>
 
@@ -393,9 +397,7 @@
     </div>
   </div>
 
-  <!-- =====================================================
-       SHARED MODAL (used for all "+" add actions)
-       ===================================================== -->
+  <!-- MODAL -->
   <div class="modal-overlay" id="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <h2 id="modal-title">Add</h2>

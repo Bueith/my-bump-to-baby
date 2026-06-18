@@ -812,3 +812,249 @@ img { max-width: 100%; display: block; }
 @media (max-width: 600px) {
   .quick-cards { grid-template-columns: 1fr; }
 }
+
+/* =====================================================
+   ONBOARDING
+   ===================================================== */
+
+.onboard-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--sage-100) 0%, var(--cream-100) 55%, var(--rose-50) 100%);
+  padding: 24px;
+}
+
+.onboard-card {
+  background: var(--cream-50);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lift);
+  padding: 40px 36px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+
+.onboard-emoji { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+.onboard-card label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--stone-600);
+  margin: 24px 0 8px;
+  text-align: left;
+}
+
+.onboard-card input[type="text"] {
+  width: 100%;
+  padding: 0.8em 1em;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--stone-200);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.stage-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 10px 0 28px;
+}
+
+.stage-btn {
+  border: 2px solid var(--stone-200);
+  border-radius: var(--radius-lg);
+  background: var(--cream-50);
+  padding: 20px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.stage-btn:hover { border-color: var(--sage-300); background: var(--sage-50); }
+
+.stage-btn.is-selected {
+  border-color: var(--sage-700);
+  background: var(--sage-100);
+}
+
+.stage-btn__emoji { font-size: 2rem; }
+
+.stage-btn__label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--stone-800);
+}
+
+.btn--full { width: 100%; justify-content: center; }
+
+/* =====================================================
+   STAGE BADGE
+   ===================================================== */
+
+.stage-badge {
+  display: inline-block;
+  background: var(--sage-100);
+  color: var(--sage-900);
+  border-radius: var(--radius-pill);
+  padding: 0.3em 0.9em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* =====================================================
+   MOOD ROW
+   ===================================================== */
+
+.mood-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.mood-btn {
+  flex: 1;
+  min-width: 56px;
+  border: 2px solid var(--stone-200);
+  border-radius: var(--radius-md);
+  background: var(--cream-50);
+  padding: 10px 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.mood-btn:hover { border-color: var(--sage-300); background: var(--sage-50); }
+
+.mood-btn.is-selected {
+  border-color: var(--sage-700);
+  background: var(--sage-100);
+}
+
+.mood-btn__emoji { font-size: 1.6rem; }
+
+.mood-btn__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--stone-600);
+}
+
+/* =====================================================
+   CHECKLIST (updated — user-built, with remove button)
+   ===================================================== */
+
+.checklist { list-style: none; margin: 0; padding: 0; }
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--stone-200);
+}
+
+.checklist li:last-child { border-bottom: none; }
+
+.checklist label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.checklist li.is-done label span {
+  text-decoration: line-through;
+  color: var(--stone-600);
+}
+
+.checklist input[type="checkbox"] {
+  width: 20px; height: 20px;
+  accent-color: var(--sage-700);
+  flex-shrink: 0;
+}
+
+/* =====================================================
+   SUGGESTIONS
+   ===================================================== */
+
+.suggest-section { margin-top: 16px; border-top: 1px solid var(--stone-200); padding-top: 14px; }
+
+.suggest-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--stone-600);
+  margin-bottom: 8px;
+}
+
+.suggest-chip {
+  background: var(--sage-50);
+  border: 1.5px solid var(--sage-300);
+  color: var(--sage-900);
+  border-radius: var(--radius-pill);
+  padding: 0.45em 0.9em;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.suggest-chip:hover { background: var(--sage-100); }
+
+/* =====================================================
+   BABY ARRIVED TRANSITION CARD
+   ===================================================== */
+
+.card--transition {
+  border: 2px dashed var(--sage-300);
+  background: var(--sage-50);
+  text-align: center;
+}
+
+/* =====================================================
+   PULSE — gentle insight card + data note
+   ===================================================== */
+
+.card--gentle { background: var(--cream-100); }
+
+.pulse-data-note { font-size: 0.78rem; margin-top: 12px; }
+
+/* =====================================================
+   BAR CHART — emoji above bars
+   ===================================================== */
+
+.bar-chart__emoji {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+/* =====================================================
+   SLEEP ROW
+   ===================================================== */
+
+.sleep-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.sleep-row input[type="number"] {
+  width: 100px;
+  padding: 0.7em 0.9em;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--stone-200);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
