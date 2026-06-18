@@ -1184,3 +1184,8 @@ img { max-width: 100%; display: block; }
   margin-top: 3px;
 }
 
+
+.storage-note {
+  font-size: 0.78rem;
+  margin-top: 4px;
+}

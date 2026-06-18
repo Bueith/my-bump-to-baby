@@ -151,7 +151,26 @@
     try {
       const raw = localStorage.getItem(STORE_KEY);
       if (!raw) return defaultState();
-      return Object.assign(defaultState(), JSON.parse(raw));
+      const saved   = JSON.parse(raw);
+      const fresh   = defaultState();
+      // Deep merge: top-level keys from saved override defaults,
+      // but nested objects (today, village, care) are merged field
+      // by field so any NEW fields added in code updates get their
+      // default values rather than coming through as undefined.
+      return {
+        ...fresh,
+        ...saved,
+        today:   { ...fresh.today,   ...(saved.today   || {}) },
+        village: {
+          members: saved.village?.members || fresh.village.members,
+          tasks:   saved.village?.tasks   || fresh.village.tasks
+        },
+        care: {
+          contacts:     saved.care?.contacts     || fresh.care.contacts,
+          appointments: saved.care?.appointments || fresh.care.appointments,
+          diary:        saved.care?.diary        || fresh.care.diary
+        }
+      };
     } catch (e) {
       return defaultState();
     }
@@ -808,6 +827,23 @@
 
   function renderLogs() {
     checkForNewDay();
+
+    // Show whether localStorage is working — helps diagnose the
+    // "looks like it resets" concern immediately.
+    const storageNote = document.getElementById("storage-note");
+    if (storageNote) {
+      try {
+        const testKey = "_ntest";
+        localStorage.setItem(testKey, "1");
+        localStorage.removeItem(testKey);
+        const lastSaved = state.today.dayKey;
+        storageNote.textContent = `✓ Data is saved on this device. Last active: ${lastSaved}`;
+        storageNote.style.color = "var(--sage-700)";
+      } catch (e) {
+        storageNote.textContent = "⚠ Storage is not available in this browser mode. Open via http:// not file://.";
+        storageNote.style.color = "var(--rose-600)";
+      }
+    }
 
     // Sleep
     const sleepInput = document.getElementById("sleep-input");
