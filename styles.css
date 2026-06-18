@@ -445,6 +445,13 @@ img { max-width: 100%; display: block; }
   margin: 18px 0 4px;
 }
 
+.trusted-card__excerpt-label {
+  font-size: 0.74rem;
+  font-style: italic;
+  color: var(--stone-600);
+  margin: -4px 0 12px;
+}
+
 .hub__hook {
   margin: 48px 0 0;
   padding: 32px;

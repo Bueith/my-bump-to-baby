@@ -290,6 +290,10 @@
       }
 
       const tierLabel = (tier) => (tier === "clinical" ? "Medically reviewed" : "Trusted community source");
+      const excerptLabel = (source) =>
+        source === "article"
+          ? "Relevant excerpt pulled directly from the article"
+          : "Search summary (full excerpt unavailable for this page)";
 
       const bestHtml = data.best ? `
         <div class="trusted-card trusted-card--best">
@@ -297,6 +301,7 @@
           <span class="trusted-card__source">${escapeHtml(tierLabel(data.best.tier))} · ${escapeHtml(data.best.source)}</span>
           <h4>${escapeHtml(data.best.title)}</h4>
           <p>${escapeHtml(data.best.snippet)}</p>
+          <p class="trusted-card__excerpt-label">${escapeHtml(excerptLabel(data.best.excerptSource))}</p>
           <a class="trusted-card__link" href="${escapeHtml(data.best.link)}" target="_blank" rel="noopener noreferrer">Read the full article on ${escapeHtml(data.best.source)} →</a>
         </div>` : "";
 
