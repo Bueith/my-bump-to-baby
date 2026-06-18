@@ -355,38 +355,104 @@
         <section class="app-panel" id="panel-logs" data-panel="logs">
           <header class="panel-header">
             <h1>Logs</h1>
-            <p>Track today, review your history below.</p>
+            <p>Quick check-ins that actually matter — for you and your midwife.</p>
           </header>
 
+          <!-- SLEEP — both stages -->
           <div class="card">
-            <div class="counter-row">
-              <div class="counter">
-                <span class="counter__emoji" aria-hidden="true">💧</span>
-                <div class="counter__text">
-                  <span class="counter__value" id="water-count">0</span>
-                  <span class="counter__label">cups today</span>
-                </div>
-                <button class="icon-btn icon-btn--primary" id="water-increment" aria-label="Add a cup">+</button>
-              </div>
-              <div class="counter" data-stage-show="postpartum">
-                <span class="counter__emoji" aria-hidden="true">🍼</span>
-                <div class="counter__text">
-                  <span class="counter__value" id="feeding-count">0</span>
-                  <span class="counter__label">feedings today</span>
-                </div>
-                <button class="icon-btn icon-btn--primary" id="feeding-increment" aria-label="Log a feeding">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h2>Sleep last night</h2>
+            <h2>😴 Sleep last night</h2>
+            <p class="muted-text">How many hours did you manage?</p>
             <div class="sleep-row">
-              <input type="number" id="sleep-input" min="0" max="24" step="0.5" placeholder="Hours" />
+              <input type="number" id="sleep-input" min="0" max="24" step="0.5" placeholder="e.g. 5.5" />
               <button class="btn btn--ghost" id="sleep-save">Save</button>
             </div>
+            <p class="log-saved-note" id="sleep-saved" hidden>Saved ✓</p>
           </div>
 
+          <!-- ENERGY — both stages, one tap -->
+          <div class="card">
+            <h2>⚡ Energy level today</h2>
+            <p class="muted-text">Tap once — no words needed.</p>
+            <div class="energy-row" id="energy-row">
+              <button class="energy-btn" data-energy="1" aria-label="Completely drained">🪫<span>Drained</span></button>
+              <button class="energy-btn" data-energy="2" aria-label="Low energy">😔<span>Low</span></button>
+              <button class="energy-btn" data-energy="3" aria-label="Okay">😐<span>Okay</span></button>
+              <button class="energy-btn" data-energy="4" aria-label="Good energy">🙂<span>Good</span></button>
+              <button class="energy-btn" data-energy="5" aria-label="Strong">⚡<span>Strong</span></button>
+            </div>
+          </div>
+
+          <!-- PREGNANT-ONLY: Baby movements -->
+          <div class="card" data-stage-show="pregnant">
+            <h2>👶 Baby movements today</h2>
+            <p class="muted-text">Count significant kicks, rolls or jabs since this morning. Your midwife will ask.</p>
+            <div class="counter-single">
+              <span class="counter__value" id="kicks-count">0</span>
+              <span class="counter__label">movements logged</span>
+              <button class="icon-btn icon-btn--primary" id="kicks-increment" aria-label="Log a movement">+</button>
+            </div>
+          </div>
+
+          <!-- PREGNANT-ONLY: Quick symptom note -->
+          <div class="card" data-stage-show="pregnant">
+            <h2>📝 Anything to note today?</h2>
+            <p class="muted-text">Headache, swelling, nausea, spotting — a quick note you can refer back to.</p>
+            <div class="note-row">
+              <input type="text" id="symptom-input" placeholder="e.g. mild headache this afternoon" autocomplete="off" />
+              <button class="btn btn--ghost" id="symptom-save">Save</button>
+            </div>
+            <ul class="plain-list" id="symptom-list"></ul>
+          </div>
+
+          <!-- POSTPARTUM-ONLY: Baby feeding -->
+          <div class="card" data-stage-show="postpartum">
+            <h2>🍼 How is baby feeding today?</h2>
+            <p class="muted-text">One tap — not a counter.</p>
+            <div class="feed-options" id="feed-options">
+              <button class="feed-btn" data-feeding="well">😊<span>Well</span></button>
+              <button class="feed-btn" data-feeding="mixed">😐<span>Mixed</span></button>
+              <button class="feed-btn" data-feeding="struggling">😟<span>Struggling</span></button>
+            </div>
+          </div>
+
+          <!-- POSTPARTUM-ONLY: Nappy log -->
+          <div class="card" data-stage-show="postpartum">
+            <h2>🧷 Nappy log today</h2>
+            <p class="muted-text">Midwives use this to check baby is feeding enough.</p>
+            <div class="counter-row">
+              <div class="counter">
+                <span class="counter__emoji">💛</span>
+                <div class="counter__text">
+                  <span class="counter__value" id="nappy-wet-count">0</span>
+                  <span class="counter__label">wet nappies</span>
+                </div>
+                <button class="icon-btn icon-btn--primary" id="nappy-wet-increment" aria-label="Log wet nappy">+</button>
+              </div>
+              <div class="counter">
+                <span class="counter__emoji">🟤</span>
+                <div class="counter__text">
+                  <span class="counter__value" id="nappy-dirty-count">0</span>
+                  <span class="counter__label">dirty nappies</span>
+                </div>
+                <button class="icon-btn icon-btn--primary" id="nappy-dirty-increment" aria-label="Log dirty nappy">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- POSTPARTUM-ONLY: Pain level -->
+          <div class="card" data-stage-show="postpartum">
+            <h2>🩹 Pain / discomfort today</h2>
+            <p class="muted-text">Rate how you're feeling physically — for your own reference and for appointments.</p>
+            <div class="energy-row" id="pain-row">
+              <button class="energy-btn" data-pain="1" aria-label="No pain">😊<span>None</span></button>
+              <button class="energy-btn" data-pain="2" aria-label="Mild">🙂<span>Mild</span></button>
+              <button class="energy-btn" data-pain="3" aria-label="Moderate">😐<span>Moderate</span></button>
+              <button class="energy-btn" data-pain="4" aria-label="Significant">😔<span>Significant</span></button>
+              <button class="energy-btn" data-pain="5" aria-label="Severe">😣<span>Severe</span></button>
+            </div>
+          </div>
+
+          <!-- HISTORY -->
           <div class="card">
             <h2>History</h2>
             <div id="logs-history" class="history-list"></div>

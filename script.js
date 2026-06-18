@@ -119,24 +119,26 @@
 
   function defaultState() {
     return {
-      // null = not onboarded yet, "pregnant" or "postpartum" once set
       stage: null,
       name: "",
       onboarded: false,
-      checklist: [],          // user's own items: [{id, label, done}]
+      checklist: [],
       today: {
         dayKey: todayKey(),
-        water: 0,
-        feedings: 0,
-        mood: null,
         sleep: 0,
-        vitaminTaken: false
+        energy: null,
+        mood: null,
+        // Pregnant
+        kicks: 0,
+        symptoms: [],
+        // Postpartum
+        feedingStatus: null,
+        nappyWet: 0,
+        nappyDirty: 0,
+        pain: null
       },
       history: [],
-      village: {
-        members: [],
-        tasks: []
-      },
+      village: { members: [], tasks: [] },
       care: {
         contacts: [{ id: "c1", name: "Emergency Services", role: "Emergency", phone: "112" }],
         appointments: [],
@@ -168,18 +170,27 @@
     if (state.today.dayKey !== key) {
       state.history.unshift({
         date: state.today.dayKey,
-        water: state.today.water,
-        feedings: state.today.feedings,
+        sleep: state.today.sleep,
+        energy: state.today.energy,
         mood: state.today.mood,
-        sleep: state.today.sleep
+        kicks: state.today.kicks,
+        symptoms: state.today.symptoms,
+        feedingStatus: state.today.feedingStatus,
+        nappyWet: state.today.nappyWet,
+        nappyDirty: state.today.nappyDirty,
+        pain: state.today.pain
       });
       state.today = {
         dayKey: key,
-        water: 0,
-        feedings: 0,
-        mood: null,
         sleep: 0,
-        vitaminTaken: false
+        energy: null,
+        mood: null,
+        kicks: 0,
+        symptoms: [],
+        feedingStatus: null,
+        nappyWet: 0,
+        nappyDirty: 0,
+        pain: null
       };
       state.checklist = state.checklist.map((item) => ({ ...item, done: false }));
       saveState();
@@ -438,29 +449,37 @@
     }
   });
 
-  /* ---------------------------------------------------
-     9. PULSE TAB
-     --------------------------------------------------- */
   function renderPulse() {
     checkForNewDay();
-    const recent    = state.history.slice(0, 6);
-    const sleepVals = [state.today.sleep, ...recent.map((d) => d.sleep || 0)];
-    const waterVals = [state.today.water, ...recent.map((d) => d.water || 0)];
-    const feedTotal = state.today.feedings + recent.reduce((s, d) => s + (d.feedings || 0), 0);
-    const moodVals  = [state.today.mood, ...recent.map((d) => d.mood)].filter((m) => m !== null && m !== undefined);
-    const avg       = (arr) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    const recent     = state.history.slice(0, 6);
+    const sleepVals  = [state.today.sleep, ...recent.map((d) => d.sleep || 0)].filter((v) => v > 0);
+    const energyVals = [state.today.energy, ...recent.map((d) => d.energy)].filter((v) => v !== null && v !== undefined);
+    const moodVals   = [state.today.mood, ...recent.map((d) => d.mood)].filter((m) => m !== null && m !== undefined);
+    const avg        = (arr) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
 
-    const avgMood  = avg(moodVals);
+    const avgMood   = avg(moodVals);
+    const avgEnergy = avg(energyVals);
+    const avgSleep  = avg(sleepVals);
     const moodEmoji = avgMood >= 4.5 ? "😊" : avgMood >= 3.5 ? "🙂" : avgMood >= 2.5 ? "😐" : avgMood >= 1.5 ? "😔" : "😢";
 
-    document.getElementById("stat-avg-mood").textContent  = moodVals.length ? `${moodEmoji} ${avgMood.toFixed(1)}` : "—";
-    document.getElementById("stat-avg-sleep").textContent = `${avg(sleepVals).toFixed(1)}h`;
-    document.getElementById("stat-avg-water").textContent = `${avg(waterVals).toFixed(1)} cups`;
-    document.getElementById("stat-feedings").textContent  = String(feedTotal);
+    document.getElementById("stat-avg-mood").textContent   = moodVals.length   ? `${moodEmoji} ${avgMood.toFixed(1)}`   : "—";
+    document.getElementById("stat-avg-sleep").textContent  = sleepVals.length  ? `${avgSleep.toFixed(1)}h`              : "—";
+    document.getElementById("stat-avg-water").textContent  = energyVals.length ? `${avgEnergy.toFixed(1)} / 5`          : "—";
 
-    // Pulse explanation — what each stat comes from
+    // Rename the water label to Energy in the DOM
+    const waterLabel = document.querySelector("#stat-avg-water")?.closest(".stat")?.querySelector(".stat__label");
+    if (waterLabel) waterLabel.textContent = "Avg energy";
+
+    // Hide feedings stat for pregnant users
+    const feedStat = document.getElementById("stat-feedings");
+    if (feedStat) {
+      const feedCard = feedStat.closest("[data-stage-show='postpartum']");
+      if (feedCard) feedCard.hidden = state.stage !== "postpartum";
+    }
+
     document.getElementById("pulse-data-note").textContent =
-      "Mood from your daily check-in on Home · Water and feedings from Logs · Sleep from Logs";
+      "Mood from Home · Sleep & Energy from Logs" +
+      (state.stage === "postpartum" ? " · Feedings from Logs" : " · Kicks from Logs");
 
     // 7-day mood bar chart
     const moodHistory = [];
@@ -471,7 +490,7 @@
     const dayLabels = ["6d ago", "5d", "4d", "3d", "2d", "Yest.", "Today"];
     document.getElementById("mood-bar-chart").innerHTML = moodHistory.map((val, i) => {
       const clamped = Math.max(1, Math.min(5, val));
-      const pct = (clamped / 5) * 100;
+      const pct  = (clamped / 5) * 100;
       const mood = MOODS.find((m) => m.value === clamped) || MOODS[2];
       return `
         <div class="bar-chart__col">
@@ -485,13 +504,15 @@
     const insightEl = document.getElementById("pulse-insight");
     let insight = "";
     if (moodVals.length < 3) {
-      insight = "Check in with your mood on the Home tab each day — after a few days your trends will appear here.";
+      insight = "Check in with your mood on the Home tab each day — your trends will appear here after a few days.";
     } else if (avgMood <= 2) {
       insight = "Your mood has been quite low this week. That's okay — and it's worth being gentle with yourself. If it continues, please talk to someone you trust or your midwife.";
+    } else if (avgSleep < 4 && sleepVals.length >= 2) {
+      insight = "Your sleep has been very low this week. Even short rest periods during the day make a real difference — ask for help if you can.";
+    } else if (avgEnergy <= 2 && energyVals.length >= 2) {
+      insight = "Your energy has been consistently low. Make sure you're resting when you can, eating regularly, and letting your village help.";
     } else if (avgMood >= 4) {
-      insight = "You've had a good week — that's worth noticing. Take a moment to acknowledge that.";
-    } else if (avg(sleepVals) < 4) {
-      insight = "Your sleep has been very low this week. Even 20 minutes of rest when you can makes a real difference.";
+      insight = "You've had a good week — that's worth noticing and holding on to.";
     } else {
       insight = "Things look fairly steady. Keep going at your own pace — you're doing a wonderful job.";
     }
@@ -779,43 +800,136 @@
   }
 
   /* ---------------------------------------------------
-     14. LOGS TAB — stage-aware counters
+     14. LOGS TAB — stage-aware meaningful tracking
      --------------------------------------------------- */
+  const ENERGY_LABELS = { 1: "Completely drained", 2: "Low", 3: "Okay", 4: "Good", 5: "Strong" };
+  const PAIN_LABELS   = { 1: "No pain", 2: "Mild", 3: "Moderate", 4: "Significant", 5: "Severe" };
+  const FEEDING_LABELS = { well: "Feeding well 😊", mixed: "Mixed 😐", struggling: "Struggling 😟" };
+
   function renderLogs() {
     checkForNewDay();
-    document.getElementById("water-count").textContent   = String(state.today.water);
-    document.getElementById("feeding-count").textContent = String(state.today.feedings);
 
-    // Sleep input
+    // Sleep
     const sleepInput = document.getElementById("sleep-input");
     if (sleepInput) sleepInput.value = state.today.sleep || "";
+    const sleepSaved = document.getElementById("sleep-saved");
+    if (sleepSaved) sleepSaved.hidden = !state.today.sleep;
 
+    // Energy
+    document.querySelectorAll("#energy-row .energy-btn").forEach((btn) => {
+      btn.classList.toggle("is-selected", parseInt(btn.dataset.energy) === state.today.energy);
+    });
+
+    // Kicks (pregnant)
+    const kicksEl = document.getElementById("kicks-count");
+    if (kicksEl) kicksEl.textContent = String(state.today.kicks);
+
+    // Symptoms (pregnant)
+    const symptomList = document.getElementById("symptom-list");
+    if (symptomList) {
+      symptomList.innerHTML = (state.today.symptoms || []).map((s, i) => `
+        <li>
+          <span>${escapeHtml(s)}</span>
+          <button class="item-remove" data-remove-symptom="${i}">✕</button>
+        </li>`).join("") || "";
+      symptomList.querySelectorAll("[data-remove-symptom]").forEach((btn) => {
+        btn.onclick = () => {
+          state.today.symptoms.splice(parseInt(btn.dataset.removeSymptom), 1);
+          saveState(); renderLogs();
+        };
+      });
+    }
+
+    // Feeding status (postpartum)
+    document.querySelectorAll("#feed-options .feed-btn").forEach((btn) => {
+      btn.classList.toggle("is-selected", btn.dataset.feeding === state.today.feedingStatus);
+    });
+
+    // Nappies (postpartum)
+    const wetEl   = document.getElementById("nappy-wet-count");
+    const dirtyEl = document.getElementById("nappy-dirty-count");
+    if (wetEl)   wetEl.textContent   = String(state.today.nappyWet);
+    if (dirtyEl) dirtyEl.textContent = String(state.today.nappyDirty);
+
+    // Pain (postpartum)
+    document.querySelectorAll("#pain-row .energy-btn").forEach((btn) => {
+      btn.classList.toggle("is-selected", parseInt(btn.dataset.pain) === state.today.pain);
+    });
+
+    // History
     const history = document.getElementById("logs-history");
     history.innerHTML = state.history.map((d) => {
-      const mood = MOODS.find((m) => m.value === d.mood);
+      const mood   = MOODS.find((m) => m.value === d.mood);
+      const isPreg = state.stage === "pregnant";
+      const extras = isPreg
+        ? `· 👶 ${d.kicks || 0} kicks${d.symptoms?.length ? ` · 📝 ${d.symptoms.length} note${d.symptoms.length > 1 ? "s" : ""}` : ""}`
+        : `· 🍼 ${FEEDING_LABELS[d.feedingStatus] || "—"} · 🧷 ${d.nappyWet || 0}W/${d.nappyDirty || 0}D`;
       return `
         <div class="history-card">
-          <span class="history-card__date">${escapeHtml(d.date)}</span>
-          <span class="history-card__stats">
-            ${mood ? mood.emoji : "—"} · 💧${d.water} · 🍼${d.feedings} · 😴${d.sleep || 0}h
-          </span>
+          <div>
+            <span class="history-card__date">${escapeHtml(d.date)}</span>
+            <span class="history-card__stats">
+              ${mood ? mood.emoji : "—"} · 😴 ${d.sleep || 0}h · ⚡ ${ENERGY_LABELS[d.energy] || "—"} ${extras}
+            </span>
+          </div>
         </div>`;
-    }).join("") || `<p class="muted-text">No history yet — builds up automatically each day.</p>`;
+    }).join("") || `<p class="muted-text">No history yet — builds up day by day.</p>`;
   }
 
-  document.getElementById("water-increment").addEventListener("click", () => {
-    checkForNewDay(); state.today.water++; saveState(); renderLogs(); renderPulse();
-  });
-  document.getElementById("feeding-increment").addEventListener("click", () => {
-    checkForNewDay(); state.today.feedings++; saveState(); renderLogs(); renderPulse();
-  });
-
-  // Sleep logging
+  // Sleep
   document.getElementById("sleep-save")?.addEventListener("click", () => {
     const val = parseFloat(document.getElementById("sleep-input")?.value);
     if (!isNaN(val) && val >= 0 && val <= 24) {
       state.today.sleep = val; saveState(); renderLogs(); renderPulse();
     }
+  });
+
+  // Energy
+  document.getElementById("energy-row")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".energy-btn[data-energy]");
+    if (!btn) return;
+    state.today.energy = parseInt(btn.dataset.energy);
+    saveState(); renderLogs();
+  });
+
+  // Kicks
+  document.getElementById("kicks-increment")?.addEventListener("click", () => {
+    checkForNewDay(); state.today.kicks = (state.today.kicks || 0) + 1; saveState(); renderLogs();
+  });
+
+  // Symptom note
+  document.getElementById("symptom-save")?.addEventListener("click", () => {
+    const input = document.getElementById("symptom-input");
+    const val   = input?.value.trim();
+    if (!val) return;
+    if (!state.today.symptoms) state.today.symptoms = [];
+    state.today.symptoms.push(val);
+    input.value = "";
+    saveState(); renderLogs();
+  });
+
+  // Feeding status
+  document.getElementById("feed-options")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".feed-btn[data-feeding]");
+    if (!btn) return;
+    state.today.feedingStatus = btn.dataset.feeding;
+    saveState(); renderLogs();
+  });
+
+  // Nappies
+  document.getElementById("nappy-wet-increment")?.addEventListener("click", () => {
+    checkForNewDay(); state.today.nappyWet = (state.today.nappyWet || 0) + 1; saveState(); renderLogs();
+  });
+  document.getElementById("nappy-dirty-increment")?.addEventListener("click", () => {
+    checkForNewDay(); state.today.nappyDirty = (state.today.nappyDirty || 0) + 1; saveState(); renderLogs();
+  });
+
+  // Pain
+  document.getElementById("pain-row")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".energy-btn[data-pain]");
+    if (!btn) return;
+    state.today.pain = parseInt(btn.dataset.pain);
+    saveState(); renderLogs();
   });
 
   /* ---------------------------------------------------
