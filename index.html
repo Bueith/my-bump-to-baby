@@ -148,6 +148,45 @@
   </div>
 
   <!-- =====================================================
+       FIREBASE LOGIN VIEW — enter access code from app
+       ===================================================== -->
+  <div id="login-view" class="view" hidden>
+    <div class="onboard-shell">
+      <div class="onboard-card">
+        <span class="onboard-emoji">🌿</span>
+        <h1>Welcome back</h1>
+        <p>Enter the access code from your Nurture mobile app to continue where you left off.</p>
+
+        <label for="login-code">Your access code</label>
+        <input
+          type="text"
+          id="login-code"
+          placeholder="e.g. NURTURE-7X4K2"
+          autocomplete="off"
+          autocapitalize="characters"
+          maxlength="14"
+        />
+        <p class="login-error" id="login-error" hidden>That code wasn't found. Check it in your app under Settings.</p>
+
+        <button class="btn btn--primary btn--full" id="login-submit" style="margin-top:16px;">
+          Open my account →
+        </button>
+
+        <div class="login-divider">
+          <span>or</span>
+        </div>
+
+        <button class="btn btn--ghost btn--full" id="login-new">
+          Start fresh on the web
+        </button>
+        <p class="muted-text" style="font-size:0.78rem;margin-top:8px;">
+          Starting fresh creates a web-only account. Download the app later to sync everything to your phone.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
        ONBOARDING VIEW
        ===================================================== -->
   <div id="onboard-view" class="view" hidden>
@@ -345,7 +384,7 @@
                 <h2>Diary</h2>
                 <button class="icon-btn" id="new-diary-btn" aria-label="New entry">+</button>
               </div>
-              <p class="muted-text">Private. Saved on this device only.</p>
+              <p class="muted-text">Stays on your device, or syncs to your account if you've connected an access code in Settings.</p>
               <ul class="plain-list" id="care-diary"></ul>
             </div>
           </div>
@@ -471,6 +510,33 @@
       <form id="modal-form"></form>
     </div>
   </div>
+
+  <!-- Firebase SDK (loaded as modules, used by script.js via window.firebase) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously }
+      from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkb6NyVCNtvok8W_POknIBmiaK9vkGvuE",
+      authDomain: "nurture-10afc.firebaseapp.com",
+      projectId: "nurture-10afc",
+      storageBucket: "nurture-10afc.firebasestorage.app",
+      messagingSenderId: "113649852193",
+      appId: "1:113649852193:web:3df23a455e1c374c662860",
+      measurementId: "G-WXL47YNTR0"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Expose to the main script via window so the non-module
+    // script.js can call Firebase functions.
+    window._nurture_firebase = { db, auth, doc, getDoc, setDoc, updateDoc, serverTimestamp, signInAnonymously };
+  </script>
 
   <script src="script.js"></script>
 </body>

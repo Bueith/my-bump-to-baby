@@ -40,12 +40,17 @@
   };
 
   // Mood options — same for both stages
+  // Matches the Android app's mood system exactly — 6 named emotions
+  // rather than a generic 1-5 scale, so mood check-ins feel identical
+  // on phone and web. "score" mirrors MoodType.score in Models.kt,
+  // used for Pulse trend averages.
   const MOODS = [
-    { value: 5, emoji: "😊", label: "Great" },
-    { value: 4, emoji: "🙂", label: "Good" },
-    { value: 3, emoji: "😐", label: "Okay" },
-    { value: 2, emoji: "😔", label: "Low" },
-    { value: 1, emoji: "😢", label: "Hard" }
+    { value: "HAPPY", emoji: "😊", label: "Happy", score: 5 },
+    { value: "CALM", emoji: "😌", label: "Calm", score: 4 },
+    { value: "TIRED", emoji: "😔", label: "Tired", score: 3 },
+    { value: "ANXIOUS", emoji: "😰", label: "Anxious", score: 2 },
+    { value: "SAD", emoji: "😢", label: "Sad", score: 2 },
+    { value: "OVERWHELMED", emoji: "😵", label: "Overwhelmed", score: 1 }
   ];
 
   // Search context appended per stage so results are relevant
@@ -122,6 +127,7 @@
       stage: null,
       name: "",
       onboarded: false,
+      accessCode: null,        // set when user logs in with code from app
       checklist: [],
       today: {
         dayKey: todayKey(),
@@ -178,6 +184,70 @@
 
   function saveState() {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    // Also sync to Firebase in the background if user has a code
+    syncToFirebase();
+  }
+
+  /* ---------------------------------------------------
+     FIREBASE SYNC LAYER
+     Reads from Firestore on open, writes on every save.
+     Falls back silently if offline or not configured.
+     --------------------------------------------------- */
+
+  function getFirebase() {
+    return window._nurture_firebase || null;
+  }
+
+  async function syncToFirebase() {
+    const fb   = getFirebase();
+    const code = state.accessCode;
+    if (!fb || !code) return;
+    try {
+      const { db, doc, setDoc, serverTimestamp } = fb;
+      await setDoc(doc(db, "users", code), {
+        ...state,
+        lastSynced: serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      // Silent — offline or quota exceeded, localStorage still has the data
+    }
+  }
+
+  async function loadFromFirebase(code) {
+    const fb = getFirebase();
+    if (!fb) return null;
+    try {
+      const { db, doc, getDoc } = fb;
+      const snap = await getDoc(doc(db, "users", code));
+      if (snap.exists()) return snap.data();
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function loginWithCode(code) {
+    const data = await loadFromFirebase(code.toUpperCase().trim());
+    if (!data) return false;
+    // Merge Firebase data into local state
+    const fresh = defaultState();
+    state = {
+      ...fresh,
+      ...data,
+      today:   { ...fresh.today,   ...(data.today   || {}) },
+      village: {
+        members: data.village?.members || fresh.village.members,
+        tasks:   data.village?.tasks   || fresh.village.tasks
+      },
+      care: {
+        contacts:     data.care?.contacts     || fresh.care.contacts,
+        appointments: data.care?.appointments || fresh.care.appointments,
+        diary:        data.care?.diary        || fresh.care.diary
+      },
+      accessCode: code.toUpperCase().trim()
+    };
+    saveState();
+    return true;
   }
 
   function todayKey() {
@@ -225,18 +295,32 @@
   const marketingView = document.getElementById("marketing-view");
   const appView       = document.getElementById("app-view");
   const onboardView   = document.getElementById("onboard-view");
+  const loginView     = document.getElementById("login-view");
 
   function showMarketing() {
     marketingView.hidden = false;
     appView.hidden       = true;
     onboardView.hidden   = true;
+    loginView.hidden     = true;
     window.scrollTo(0, 0);
+  }
+
+  function showLogin() {
+    marketingView.hidden = true;
+    appView.hidden       = true;
+    onboardView.hidden   = true;
+    loginView.hidden     = false;
+    window.scrollTo(0, 0);
+    // Clear any previous error
+    document.getElementById("login-error").hidden = true;
+    document.getElementById("login-code").value = "";
   }
 
   function showOnboarding() {
     marketingView.hidden = true;
     appView.hidden       = true;
     onboardView.hidden   = false;
+    loginView.hidden     = true;
     window.scrollTo(0, 0);
     renderOnboarding();
   }
@@ -245,6 +329,7 @@
     marketingView.hidden = true;
     appView.hidden       = false;
     onboardView.hidden   = true;
+    loginView.hidden     = true;
     window.scrollTo(0, 0);
     applyStageToApp();
     renderAll();
@@ -252,7 +337,9 @@
 
   function launchApp() {
     if (!state.onboarded) {
-      showOnboarding();
+      // First time on web — show login first so they can connect
+      // their mobile app account, or choose to start fresh
+      showLogin();
     } else {
       showApp();
     }
@@ -261,6 +348,34 @@
   document.getElementById("nav-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
   document.getElementById("hero-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
   document.getElementById("app-exit").addEventListener("click", (e) => { e.preventDefault(); showMarketing(); });
+
+  // Login screen — enter code from mobile app
+  document.getElementById("login-submit").addEventListener("click", async () => {
+    const code    = document.getElementById("login-code").value.trim().toUpperCase();
+    const errorEl = document.getElementById("login-error");
+    const btn     = document.getElementById("login-submit");
+    if (!code) return;
+    btn.textContent = "Looking up your account…";
+    btn.disabled = true;
+    const found = await loginWithCode(code);
+    btn.textContent = "Open my account →";
+    btn.disabled = false;
+    if (found) {
+      showApp();
+    } else {
+      errorEl.hidden = false;
+    }
+  });
+
+  // Format code input as uppercase automatically
+  document.getElementById("login-code").addEventListener("input", (e) => {
+    e.target.value = e.target.value.toUpperCase();
+  });
+
+  // Start fresh on the web — skip code, go straight to onboarding
+  document.getElementById("login-new").addEventListener("click", () => {
+    showOnboarding();
+  });
 
   /* ---------------------------------------------------
      4. ONBOARDING — name + stage selection
@@ -393,7 +508,7 @@
 
     moodRow.querySelectorAll(".mood-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        state.today.mood = parseInt(btn.dataset.mood);
+        state.today.mood = btn.dataset.mood;
         saveState();
         renderHome();
         renderPulse();
@@ -468,18 +583,24 @@
     }
   });
 
+  function moodScore(moodKey) {
+    const mood = MOODS.find((m) => m.value === moodKey);
+    return mood ? mood.score : 3;
+  }
+
   function renderPulse() {
     checkForNewDay();
     const recent     = state.history.slice(0, 6);
     const sleepVals  = [state.today.sleep, ...recent.map((d) => d.sleep || 0)].filter((v) => v > 0);
     const energyVals = [state.today.energy, ...recent.map((d) => d.energy)].filter((v) => v !== null && v !== undefined);
-    const moodVals   = [state.today.mood, ...recent.map((d) => d.mood)].filter((m) => m !== null && m !== undefined);
+    const moodKeys   = [state.today.mood, ...recent.map((d) => d.mood)].filter((m) => m !== null && m !== undefined);
+    const moodVals   = moodKeys.map(moodScore);
     const avg        = (arr) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
 
     const avgMood   = avg(moodVals);
     const avgEnergy = avg(energyVals);
     const avgSleep  = avg(sleepVals);
-    const moodEmoji = avgMood >= 4.5 ? "😊" : avgMood >= 3.5 ? "🙂" : avgMood >= 2.5 ? "😐" : avgMood >= 1.5 ? "😔" : "😢";
+    const moodEmoji = avgMood >= 4.5 ? "😊" : avgMood >= 3.5 ? "😌" : avgMood >= 2.5 ? "😔" : avgMood >= 1.5 ? "😰" : "😵";
 
     document.getElementById("stat-avg-mood").textContent   = moodVals.length   ? `${moodEmoji} ${avgMood.toFixed(1)}`   : "—";
     document.getElementById("stat-avg-sleep").textContent  = sleepVals.length  ? `${avgSleep.toFixed(1)}h`              : "—";
@@ -500,17 +621,18 @@
       "Mood from Home · Sleep & Energy from Logs" +
       (state.stage === "postpartum" ? " · Feedings from Logs" : " · Kicks from Logs");
 
-    // 7-day mood bar chart
+    // 7-day mood bar chart — uses score (1-5) for bar height, but shows
+    // the actual mood emoji for that day, matching the Android app.
     const moodHistory = [];
-    [...recent].reverse().forEach((d) => moodHistory.push(d.mood || 3));
-    while (moodHistory.length < 6) moodHistory.unshift(3);
-    moodHistory.push(state.today.mood || 3);
+    [...recent].reverse().forEach((d) => moodHistory.push(d.mood || "TIRED"));
+    while (moodHistory.length < 6) moodHistory.unshift("TIRED");
+    moodHistory.push(state.today.mood || "TIRED");
 
     const dayLabels = ["6d ago", "5d", "4d", "3d", "2d", "Yest.", "Today"];
-    document.getElementById("mood-bar-chart").innerHTML = moodHistory.map((val, i) => {
-      const clamped = Math.max(1, Math.min(5, val));
-      const pct  = (clamped / 5) * 100;
-      const mood = MOODS.find((m) => m.value === clamped) || MOODS[2];
+    document.getElementById("mood-bar-chart").innerHTML = moodHistory.map((moodKey, i) => {
+      const score = moodScore(moodKey);
+      const pct  = (score / 5) * 100;
+      const mood = MOODS.find((m) => m.value === moodKey) || MOODS[2];
       return `
         <div class="bar-chart__col">
           <span class="bar-chart__emoji">${mood.emoji}</span>

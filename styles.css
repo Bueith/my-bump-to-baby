@@ -1189,3 +1189,31 @@ img { max-width: 100%; display: block; }
   font-size: 0.78rem;
   margin-top: 4px;
 }
+
+/* =====================================================
+   LOGIN SCREEN
+   ===================================================== */
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--stone-600);
+  font-size: 0.85rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--stone-200);
+}
+
+.login-error {
+  color: var(--rose-600);
+  font-size: 0.85rem;
+  margin-top: 8px;
+  font-weight: 700;
+}
