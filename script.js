@@ -139,11 +139,29 @@
     catch (e) { /* ignore */ }
   }
 
-  // Per-tab-session only — true once the password has been verified
-  // THIS load of the page. Deliberately not persisted to localStorage,
-  // so every fresh visit/reload requires password verification again,
-  // even though the code itself may be remembered for convenience.
-  let isUnlocked = false;
+  // Per-tab-session — true once the password has been verified for
+  // this browser tab session. Uses sessionStorage deliberately: it
+  // survives page reloads and navigating between views (so the
+  // person isn't asked to log in again every time they switch
+  // screens or refresh), but is automatically cleared by the browser
+  // the moment the tab/window is closed, unlike localStorage which
+  // would persist indefinitely. This is exactly "log in once per
+  // session," not "log in once ever" and not "log in every click."
+  const SESSION_UNLOCKED_KEY = "nurture_session_unlocked";
+
+  function getIsUnlocked() {
+    try { return sessionStorage.getItem(SESSION_UNLOCKED_KEY) === "1"; }
+    catch (e) { return false; }
+  }
+
+  function setIsUnlocked(value) {
+    try {
+      if (value) sessionStorage.setItem(SESSION_UNLOCKED_KEY, "1");
+      else sessionStorage.removeItem(SESSION_UNLOCKED_KEY);
+    } catch (e) { /* ignore */ }
+  }
+
+  let isUnlocked = getIsUnlocked();
 
   function defaultState() {
     return {
@@ -400,6 +418,7 @@
         onboarded: true
       };
       isUnlocked = true;
+      setIsUnlocked(true);
       setRememberedCode(state.accessCode);
       saveState();
       onSuccess();
@@ -428,6 +447,7 @@
   document.getElementById("app-exit").addEventListener("click", (e) => {
     e.preventDefault();
     isUnlocked = false;
+    setIsUnlocked(false);
     showMarketing();
   });
 
@@ -481,6 +501,8 @@
 
   document.getElementById("auth-overlay-different")?.addEventListener("click", () => {
     setRememberedCode("");
+    isUnlocked = false;
+    setIsUnlocked(false);
     state.accessCode = null;
     state.onboarded = false;
     saveState();
