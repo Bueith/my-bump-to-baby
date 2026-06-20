@@ -371,22 +371,30 @@
         errorEl.hidden = false;
         return false;
       }
-      // Merge the verified cloud data into local state — same
-      // shape/merge logic as loginWithCode used previously.
+      // Merge the verified cloud data with whatever's already saved
+      // locally on this device — cloud data fills in/overrides where
+      // present, but we never silently discard local data that simply
+      // hasn't finished syncing to the cloud yet (background sync is
+      // async; a fast reload + re-login could otherwise race it and
+      // wipe out a just-added item). The local state loaded at page
+      // start (via loadState()) is the fallback base here, not a
+      // blank defaultState().
       const fresh = defaultState();
       const cloud = data.userData || {};
+      const localBase = state || fresh;
       state = {
         ...fresh,
+        ...localBase,
         ...cloud,
-        today:   { ...fresh.today,   ...(cloud.today   || {}) },
+        today:   { ...fresh.today,   ...(localBase.today   || {}), ...(cloud.today   || {}) },
         village: {
-          members: cloud.village?.members || fresh.village.members,
-          tasks:   cloud.village?.tasks   || fresh.village.tasks
+          members: (cloud.village?.members?.length ? cloud.village.members : localBase.village?.members) || fresh.village.members,
+          tasks:   (cloud.village?.tasks?.length   ? cloud.village.tasks   : localBase.village?.tasks)   || fresh.village.tasks
         },
         care: {
-          contacts:     cloud.care?.contacts     || fresh.care.contacts,
-          appointments: cloud.care?.appointments || fresh.care.appointments,
-          diary:        cloud.care?.diary        || fresh.care.diary
+          contacts:     (cloud.care?.contacts?.length     ? cloud.care.contacts     : localBase.care?.contacts)     || fresh.care.contacts,
+          appointments: (cloud.care?.appointments?.length ? cloud.care.appointments : localBase.care?.appointments) || fresh.care.appointments,
+          diary:        (cloud.care?.diary?.length        ? cloud.care.diary        : localBase.care?.diary)        || fresh.care.diary
         },
         accessCode: code.toUpperCase().trim(),
         onboarded: true
