@@ -779,8 +779,8 @@ img { max-width: 100%; display: block; }
   .counter-row { grid-template-columns: 1fr; }
   .stat-row { grid-template-columns: repeat(2, 1fr); gap: 18px 12px; }
 
-  .site-nav { gap: 1em; }
-  .site-nav a:not(.site-nav__cta) { display: none; }
+  .site-nav { gap: 0.8em; }
+  .site-nav a:not(.site-nav__cta):not(#nav-login) { display: none; }
 
   .hero { padding: 56px 0 44px; }
   .hero__actions { flex-direction: column; align-items: stretch; }
@@ -1216,4 +1216,70 @@ img { max-width: 100%; display: block; }
   font-size: 0.85rem;
   margin-top: 8px;
   font-weight: 700;
+}
+
+/* =====================================================
+   AUTH OVERLAY — password gate over a blurred app shell
+   ===================================================== */
+
+#app-view.app-locked {
+  position: relative;
+}
+
+.app-locked .app-shell {
+  filter: blur(14px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(44, 65, 38, 0.25);
+}
+
+.auth-overlay[hidden] { display: none; }
+
+.auth-overlay__card {
+  max-width: 420px;
+  box-shadow: var(--shadow-lift);
+}
+
+/* =====================================================
+   REGISTER VIEW
+   ===================================================== */
+
+.register-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.register-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.92rem;
+  color: var(--stone-800);
+}
+
+.register-step__num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sage-700);
+  color: var(--cream-50);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

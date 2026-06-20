@@ -26,6 +26,8 @@
         <nav class="site-nav" aria-label="Primary">
           <a href="#hub">Common Questions</a>
           <a href="#features">What's Inside</a>
+          <a href="#" id="nav-register">Register</a>
+          <a href="#" id="nav-login">Login</a>
           <a href="#" id="nav-launch-app" class="site-nav__cta">Open the App</a>
         </nav>
       </div>
@@ -154,10 +156,10 @@
     <div class="onboard-shell">
       <div class="onboard-card">
         <span class="onboard-emoji">🌿</span>
-        <h1>Welcome back</h1>
-        <p>Enter the access code from your Nurture mobile app to continue where you left off.</p>
+        <h1>Log in</h1>
+        <p>Enter the Web Access Code and Web Password set up in your Nurture mobile app.</p>
 
-        <label for="login-code">Your access code</label>
+        <label for="login-code">Web Access Code</label>
         <input
           type="text"
           id="login-code"
@@ -166,22 +168,77 @@
           autocapitalize="characters"
           maxlength="14"
         />
-        <p class="login-error" id="login-error" hidden>That code wasn't found. Check it in your app under Settings.</p>
+
+        <label for="login-password">Web Password</label>
+        <input
+          type="password"
+          id="login-password"
+          placeholder="Your web password"
+          autocomplete="current-password"
+        />
+
+        <p class="login-error" id="login-error" hidden></p>
 
         <button class="btn btn--primary btn--full" id="login-submit" style="margin-top:16px;">
-          Open my account →
+          Log in →
         </button>
 
         <div class="login-divider">
           <span>or</span>
         </div>
 
-        <button class="btn btn--ghost btn--full" id="login-new">
-          Start fresh on the web
-        </button>
-        <p class="muted-text" style="font-size:0.78rem;margin-top:8px;">
-          Starting fresh creates a web-only account. Download the app later to sync everything to your phone.
+        <a href="#" id="goto-register" class="btn btn--ghost btn--full" style="text-decoration:none; text-align:center; display:block;">
+          Don't have an account? Register
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       REGISTER VIEW — explains account creation happens
+       on the mobile app, not the website
+       ===================================================== -->
+  <div id="register-view" class="view" hidden>
+    <div class="onboard-shell">
+      <div class="onboard-card">
+        <span class="onboard-emoji">📱</span>
+        <h1>Create your account on the app</h1>
+        <p>
+          For your safety, Nurture accounts are created on the mobile app, not the
+          website. This keeps your Web Access Code and Web Password tied to a real
+          device from the start.
         </p>
+
+        <div class="register-steps">
+          <div class="register-step">
+            <span class="register-step__num">1</span>
+            <span>Download and open the Nurture app on your phone</span>
+          </div>
+          <div class="register-step">
+            <span class="register-step__num">2</span>
+            <span>Complete the short setup — pick your stage and create a Web Password</span>
+          </div>
+          <div class="register-step">
+            <span class="register-step__num">3</span>
+            <span>Find your Web Access Code in Settings</span>
+          </div>
+          <div class="register-step">
+            <span class="register-step__num">4</span>
+            <span>Come back here and log in with your code and password</span>
+          </div>
+        </div>
+
+        <div class="hero__actions" style="justify-content:center; margin: 20px 0;">
+          <a href="#download" class="btn btn--primary" id="register-download-link">Download the App</a>
+        </div>
+
+        <div class="login-divider">
+          <span>already set up?</span>
+        </div>
+
+        <a href="#" id="goto-login" class="btn btn--ghost btn--full" style="text-decoration:none; text-align:center; display:block;">
+          Log in instead
+        </a>
       </div>
     </div>
   </div>
@@ -199,6 +256,49 @@
        WEB APP DASHBOARD
        ===================================================== -->
   <div id="app-view" class="view" hidden>
+    <!-- ===================================================
+         AUTH OVERLAY — sits above the blurred app shell when
+         a returning browser hasn't verified its password yet
+         this page-load. The app behind it shows only its
+         static skeleton/shell, never real synced data, until
+         this is dismissed by a successful verify.
+         =================================================== -->
+    <div id="auth-overlay" class="auth-overlay" hidden>
+      <div class="onboard-card auth-overlay__card">
+        <span class="onboard-emoji">🔒</span>
+        <h1>Unlock your account</h1>
+        <p>This browser remembers your access code. Enter your Web Password to continue.</p>
+
+        <label for="auth-overlay-code">Web Access Code</label>
+        <input
+          type="text"
+          id="auth-overlay-code"
+          placeholder="e.g. NURTURE-7X4K2"
+          autocomplete="off"
+          autocapitalize="characters"
+          maxlength="14"
+        />
+
+        <label for="auth-overlay-password">Web Password</label>
+        <input
+          type="password"
+          id="auth-overlay-password"
+          placeholder="Your web password"
+          autocomplete="current-password"
+        />
+
+        <p class="login-error" id="auth-overlay-error" hidden></p>
+
+        <button class="btn btn--primary btn--full" id="auth-overlay-submit" style="margin-top:16px;">
+          Unlock →
+        </button>
+
+        <button class="btn btn--ghost btn--full" id="auth-overlay-different" style="margin-top:10px;">
+          Use a different account
+        </button>
+      </div>
+    </div>
+
     <div class="app-shell">
 
       <nav class="app-nav" aria-label="App sections">

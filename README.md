@@ -1,76 +1,101 @@
 # Nurture — setup notes
 
-## Running locally with Live Server (no search)
+## Running locally with Live Server (no search, no real login)
 
 Open this folder in VS Code, right-click `index.html`, choose
-"Open with Live Server." The marketing page and the full app
-dashboard work, including all 18 built-in questions, localStorage
-trackers, and the diary. The "Search trusted medical sources" button
-will not work under Live Server — see below.
+"Open with Live Server." The marketing page, onboarding, and the app
+dashboard render and work for localStorage-only testing. The trusted
+search button and real password login will NOT work under Live
+Server, since both need the serverless functions in `/api` — see
+below for those.
 
-## Running locally with the trusted-source search working
+## Running locally with search AND login working
 
-Live Server only serves static files; it cannot run the serverless
-function in `/api/search.js`. To test search locally:
+Live Server only serves static files; it cannot run the functions in
+`/api/search.js` or `/api/auth.js`. To test either locally:
 
 1. Install the Vercel CLI: `npm install -g vercel`
 2. From this folder, run: `vercel dev`
 3. Open the local URL it gives you (usually `http://localhost:3000`)
 
-`vercel dev` runs your static files AND the `/api/search` function
-together, exactly like production.
+## Setting up trusted-source search (Serper.dev)
 
-## Setting up the search API key
+The search feature calls Serper.dev (a Google Search API wrapper) at
+`/api/search.js`, restricted to a trusted-source allowlist and
+ranked into two tiers so the single best match is highlighted:
 
-The search feature uses Google's Custom Search JSON API, restricted
-to a trusted-source allowlist. Results are also ranked server-side
-into two tiers so the single best match is highlighted:
-
-- **Tier 1 — medically reviewed clinical authorities** (ranked
-  highest): `nhs.uk`, `acog.org`
+- **Tier 1 — medically reviewed clinical authorities**: `nhs.uk`,
+  `acog.org`
 - **Tier 2 — trusted pregnancy/parenting sources**: `mayoclinic.org`,
   `kidshealth.org`, `babycenter.com`, `whattoexpect.com`,
   `peanut-app.io`
 
-Edit `TIER_1_CLINICAL` and `TIER_2_COMMUNITY` near the top of
-`api/search.js` to change this list or the ranking weight.
-
-1. Go to https://programmablesearchengine.google.com/ and create a
-   new search engine. Under "Sites to search," add each domain
-   above using the "Entire domain" pattern, e.g. `www.nhs.uk/*`,
-   `www.acog.org/*`, `www.mayoclinic.org/*`, `kidshealth.org/*`,
-   `www.babycenter.com/*`, `www.whattoexpect.com/*`,
-   `www.peanut-app.io/*`. Copy the "Search engine ID" — this is your
-   `GOOGLE_CSE_ID`.
-2. Go to https://console.cloud.google.com/apis/credentials, enable
-   the "Custom Search API," and create an API key. This is your
-   `GOOGLE_CSE_API_KEY`.
-3. Locally: create a file named `.env` in this folder containing:
+1. Sign up at https://serper.dev (free tier, no credit card) and
+   copy your API key from the dashboard.
+2. Locally: add to `.env.local` in this folder:
    ```
-   GOOGLE_CSE_API_KEY=your_key_here
-   GOOGLE_CSE_ID=your_search_engine_id_here
+   SERPER_API_KEY=your_key_here
    ```
-   `vercel dev` reads this automatically. Never commit this file.
-4. On Vercel: in your project's Settings → Environment Variables,
-   add the same two variables, then redeploy.
+3. On Vercel: Settings -> Environment Variables -> add the same key
+   for Production, Preview, and Development -> redeploy.
 
-The free tier of the Custom Search API allows 100 queries per day.
-Beyond that it returns billing-required errors, which the front end
-will show as a "search failed" message rather than crashing.
+## Setting up the password login system (Firebase Admin)
+
+The Web Password login (`/api/auth.js`) needs server-side access to
+Firestore via the Firebase Admin SDK -- this is separate from the
+client-side Firebase config already embedded in `index.html`, and
+requires its own credential.
+
+1. In the Firebase console, go to your project -> Project Settings
+   -> Service Accounts tab.
+2. Click "Generate new private key" -- this downloads a JSON file.
+   Treat this file like a master password; never commit it to git.
+3. Open that JSON file and copy its entire contents as one string.
+4. Locally: add to `.env.local`:
+   ```
+   FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"...", ...the full JSON, all on one line...}
+   ```
+5. On Vercel: Settings -> Environment Variables -> add
+   `FIREBASE_SERVICE_ACCOUNT_KEY` with the same full JSON string, for
+   Production, Preview, and Development -> redeploy.
+
+### How the password system works
+
+- Passwords are never stored or compared as plain text anywhere.
+  `/api/auth.js` hashes them server-side (Node's built-in scrypt,
+  with a random salt per password) before saving to Firestore, and
+  verification re-hashes the entered password and compares hashes --
+  never the raw password.
+- The Android app calls `/api/auth` with `action: "set"` when the
+  user creates or resets their Web Password.
+- The website calls `/api/auth` with `action: "verify"` on every
+  login attempt (the standalone login page, and the auth overlay
+  shown to returning browsers). Only on success does the website
+  receive the user's actual synced data.
+- A browser may remember an access code for convenience (so it's
+  pre-filled in the password box), but this is purely cosmetic --
+  every fresh page load requires the password to be verified again
+  before any real data is fetched or displayed. The app shell is
+  visually blurred behind a login overlay until that happens.
 
 ## Deploying to Vercel
 
 Push this folder to a GitHub repo and import it in Vercel's
 dashboard, or run `vercel` from the command line. No build settings
-are required — Vercel detects the static files and the `/api`
-folder automatically. Add your environment variables (above) before
-or after the first deploy; redeploy after adding them.
+are required -- Vercel detects the static files and the `/api`
+folder automatically. Add the environment variables above
+(`SERPER_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_KEY`) before or after
+the first deploy; redeploy after adding them.
 
 ## Privacy notes
 
-- All trackers (water, feedings, mood, diary, village, care) save
-  only to the browser's `localStorage`. Nothing is sent anywhere.
+- Local trackers (mood, sleep, logs, diary, village, care) save to
+  the browser's localStorage for offline-first speed, and sync to
+  Firestore only once a session is unlocked with a verified Web
+  Password.
 - The trusted-source search sends only the typed query text to
-  Google's Custom Search API to retrieve results. It is not logged
-  or stored by this app. Review Google's own data handling if this
-  matters for your privacy policy.
+  Serper.dev. It is not logged or stored by this app.
+- The remembered access code (for login-form convenience) is stored
+  separately from app data and never grants access by itself -- it
+  only pre-fills a text field. The password is what actually
+  authorizes access, checked server-side on every fresh page load.

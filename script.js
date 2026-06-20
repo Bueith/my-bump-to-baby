@@ -122,12 +122,35 @@
      --------------------------------------------------- */
   const STORE_KEY = "nurture_state_v2";
 
+  // Separate, lightweight key — remembers which access code this
+  // browser last used, purely as a typing convenience for the login
+  // form. This is NOT a credential and NEVER grants access on its
+  // own; the password still has to be entered and verified server-side
+  // every time the app is unlocked in a fresh page load.
+  const REMEMBERED_CODE_KEY = "nurture_remembered_code";
+
+  function getRememberedCode() {
+    try { return localStorage.getItem(REMEMBERED_CODE_KEY) || ""; }
+    catch (e) { return ""; }
+  }
+
+  function setRememberedCode(code) {
+    try { localStorage.setItem(REMEMBERED_CODE_KEY, code); }
+    catch (e) { /* ignore */ }
+  }
+
+  // Per-tab-session only — true once the password has been verified
+  // THIS load of the page. Deliberately not persisted to localStorage,
+  // so every fresh visit/reload requires password verification again,
+  // even though the code itself may be remembered for convenience.
+  let isUnlocked = false;
+
   function defaultState() {
     return {
       stage: null,
       name: "",
       onboarded: false,
-      accessCode: null,        // set when user logs in with code from app
+      accessCode: null,        // set only after successful password verification
       checklist: [],
       today: {
         dayKey: todayKey(),
@@ -201,7 +224,9 @@
   async function syncToFirebase() {
     const fb   = getFirebase();
     const code = state.accessCode;
-    if (!fb || !code) return;
+    // Only sync once unlocked this session — never push/pull real
+    // data through the client SDK before password verification.
+    if (!fb || !code || !isUnlocked) return;
     try {
       const { db, doc, setDoc, serverTimestamp } = fb;
       await setDoc(doc(db, "users", code), {
@@ -211,43 +236,6 @@
     } catch (e) {
       // Silent — offline or quota exceeded, localStorage still has the data
     }
-  }
-
-  async function loadFromFirebase(code) {
-    const fb = getFirebase();
-    if (!fb) return null;
-    try {
-      const { db, doc, getDoc } = fb;
-      const snap = await getDoc(doc(db, "users", code));
-      if (snap.exists()) return snap.data();
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function loginWithCode(code) {
-    const data = await loadFromFirebase(code.toUpperCase().trim());
-    if (!data) return false;
-    // Merge Firebase data into local state
-    const fresh = defaultState();
-    state = {
-      ...fresh,
-      ...data,
-      today:   { ...fresh.today,   ...(data.today   || {}) },
-      village: {
-        members: data.village?.members || fresh.village.members,
-        tasks:   data.village?.tasks   || fresh.village.tasks
-      },
-      care: {
-        contacts:     data.care?.contacts     || fresh.care.contacts,
-        appointments: data.care?.appointments || fresh.care.appointments,
-        diary:        data.care?.diary        || fresh.care.diary
-      },
-      accessCode: code.toUpperCase().trim()
-    };
-    saveState();
-    return true;
   }
 
   function todayKey() {
@@ -296,85 +284,217 @@
   const appView       = document.getElementById("app-view");
   const onboardView   = document.getElementById("onboard-view");
   const loginView     = document.getElementById("login-view");
+  const registerView  = document.getElementById("register-view");
+  const authOverlay   = document.getElementById("auth-overlay");
 
-  function showMarketing() {
-    marketingView.hidden = false;
-    appView.hidden       = true;
-    onboardView.hidden   = true;
-    loginView.hidden     = true;
-    window.scrollTo(0, 0);
-  }
-
-  function showLogin() {
+  function hideAllViews() {
     marketingView.hidden = true;
     appView.hidden       = true;
     onboardView.hidden   = true;
-    loginView.hidden     = false;
+    loginView.hidden     = true;
+    registerView.hidden  = true;
+  }
+
+  function showMarketing() {
+    hideAllViews();
+    marketingView.hidden = false;
     window.scrollTo(0, 0);
-    // Clear any previous error
+  }
+
+  function showRegister() {
+    hideAllViews();
+    registerView.hidden = false;
+    window.scrollTo(0, 0);
+  }
+
+  // Shows the standalone full-page login (used from the marketing
+  // page's "Login" link/button, and from "Register" -> existing user).
+  function showLogin() {
+    hideAllViews();
+    loginView.hidden = false;
+    window.scrollTo(0, 0);
     document.getElementById("login-error").hidden = true;
-    document.getElementById("login-code").value = "";
+    const codeInput = document.getElementById("login-code");
+    codeInput.value = getRememberedCode();
+    document.getElementById("login-password").value = "";
   }
 
   function showOnboarding() {
-    marketingView.hidden = true;
-    appView.hidden       = true;
-    onboardView.hidden   = false;
-    loginView.hidden     = true;
+    hideAllViews();
+    onboardView.hidden = false;
     window.scrollTo(0, 0);
     renderOnboarding();
   }
 
+  // Shows the app shell. If not yet unlocked this page-load, the
+  // password overlay renders on top and the real data is NOT fetched
+  // or rendered underneath — only a blurred skeleton placeholder.
   function showApp() {
-    marketingView.hidden = true;
-    appView.hidden       = false;
-    onboardView.hidden   = true;
-    loginView.hidden     = true;
+    hideAllViews();
+    appView.hidden = false;
     window.scrollTo(0, 0);
-    applyStageToApp();
-    renderAll();
+
+    if (!isUnlocked && state.accessCode) {
+      // Returning browser with a known account, but this fresh
+      // page-load hasn't been password-verified yet — show the
+      // blurred app behind a login overlay instead of real data.
+      appView.classList.add("app-locked");
+      renderAuthOverlay();
+    } else {
+      appView.classList.remove("app-locked");
+      authOverlay.hidden = true;
+      applyStageToApp();
+      renderAll();
+    }
+  }
+
+  function renderAuthOverlay() {
+    authOverlay.hidden = false;
+    document.getElementById("auth-overlay-error").hidden = true;
+    const codeInput = document.getElementById("auth-overlay-code");
+    codeInput.value = state.accessCode || getRememberedCode();
+    document.getElementById("auth-overlay-password").value = "";
+  }
+
+  async function attemptUnlock(code, password, errorElId, onSuccess) {
+    const errorEl = document.getElementById(errorElId);
+    errorEl.hidden = true;
+    try {
+      const response = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", code, password })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        errorEl.textContent = data.error || "Couldn't verify those details. Please try again.";
+        errorEl.hidden = false;
+        return false;
+      }
+      // Merge the verified cloud data into local state — same
+      // shape/merge logic as loginWithCode used previously.
+      const fresh = defaultState();
+      const cloud = data.userData || {};
+      state = {
+        ...fresh,
+        ...cloud,
+        today:   { ...fresh.today,   ...(cloud.today   || {}) },
+        village: {
+          members: cloud.village?.members || fresh.village.members,
+          tasks:   cloud.village?.tasks   || fresh.village.tasks
+        },
+        care: {
+          contacts:     cloud.care?.contacts     || fresh.care.contacts,
+          appointments: cloud.care?.appointments || fresh.care.appointments,
+          diary:        cloud.care?.diary        || fresh.care.diary
+        },
+        accessCode: code.toUpperCase().trim(),
+        onboarded: true
+      };
+      isUnlocked = true;
+      setRememberedCode(state.accessCode);
+      saveState();
+      onSuccess();
+      return true;
+    } catch (err) {
+      errorEl.textContent = "Couldn't reach the server. Please check your connection and try again.";
+      errorEl.hidden = false;
+      return false;
+    }
   }
 
   function launchApp() {
-    if (!state.onboarded) {
-      // First time on web — show login first so they can connect
-      // their mobile app account, or choose to start fresh
-      showLogin();
-    } else {
+    if (state.onboarded && state.accessCode) {
+      // Returning browser with a linked account — go straight to the
+      // app shell, which will show the password overlay if this fresh
+      // page-load hasn't been unlocked yet.
       showApp();
+    } else {
+      // Genuinely new to this browser — full landing-page-first flow.
+      showLogin();
     }
   }
 
   document.getElementById("nav-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
   document.getElementById("hero-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
-  document.getElementById("app-exit").addEventListener("click", (e) => { e.preventDefault(); showMarketing(); });
+  document.getElementById("app-exit").addEventListener("click", (e) => {
+    e.preventDefault();
+    isUnlocked = false;
+    showMarketing();
+  });
 
-  // Login screen — enter code from mobile app
+  // Standalone login page (marketing -> Login)
   document.getElementById("login-submit").addEventListener("click", async () => {
-    const code    = document.getElementById("login-code").value.trim().toUpperCase();
-    const errorEl = document.getElementById("login-error");
-    const btn     = document.getElementById("login-submit");
-    if (!code) return;
-    btn.textContent = "Looking up your account…";
-    btn.disabled = true;
-    const found = await loginWithCode(code);
-    btn.textContent = "Open my account →";
-    btn.disabled = false;
-    if (found) {
-      showApp();
-    } else {
+    const code     = document.getElementById("login-code").value.trim().toUpperCase();
+    const password = document.getElementById("login-password").value;
+    const btn      = document.getElementById("login-submit");
+    if (!code || !password) {
+      const errorEl = document.getElementById("login-error");
+      errorEl.textContent = "Enter both your access code and password.";
       errorEl.hidden = false;
+      return;
     }
+    btn.textContent = "Verifying…";
+    btn.disabled = true;
+    await attemptUnlock(code, password, "login-error", () => showApp());
+    btn.textContent = "Log in →";
+    btn.disabled = false;
   });
 
-  // Format code input as uppercase automatically
-  document.getElementById("login-code").addEventListener("input", (e) => {
-    e.target.value = e.target.value.toUpperCase();
+  // Auth overlay (blurred app, returning browser)
+  document.getElementById("auth-overlay-submit").addEventListener("click", async () => {
+    const code     = document.getElementById("auth-overlay-code").value.trim().toUpperCase();
+    const password = document.getElementById("auth-overlay-password").value;
+    const btn      = document.getElementById("auth-overlay-submit");
+    if (!code || !password) {
+      const errorEl = document.getElementById("auth-overlay-error");
+      errorEl.textContent = "Enter both your access code and password.";
+      errorEl.hidden = false;
+      return;
+    }
+    btn.textContent = "Verifying…";
+    btn.disabled = true;
+    await attemptUnlock(code, password, "auth-overlay-error", () => {
+      appView.classList.remove("app-locked");
+      authOverlay.hidden = true;
+      applyStageToApp();
+      renderAll();
+    });
+    btn.textContent = "Unlock →";
+    btn.disabled = false;
   });
 
-  // Start fresh on the web — skip code, go straight to onboarding
-  document.getElementById("login-new").addEventListener("click", () => {
-    showOnboarding();
+  // Uppercase the code as it's typed, on both login forms
+  ["login-code", "auth-overlay-code"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("input", (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+  });
+
+  document.getElementById("auth-overlay-different")?.addEventListener("click", () => {
+    setRememberedCode("");
+    state.accessCode = null;
+    state.onboarded = false;
+    saveState();
+    showLogin();
+  });
+
+  // Register / Login navigation links
+  document.getElementById("goto-register")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showRegister();
+  });
+  document.getElementById("goto-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showLogin();
+  });
+  document.getElementById("nav-register")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showRegister();
+  });
+  document.getElementById("nav-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showLogin();
   });
 
   /* ---------------------------------------------------
