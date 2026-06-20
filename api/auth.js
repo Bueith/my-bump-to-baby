@@ -86,13 +86,12 @@ export default async function handler(req, res) {
   try {
     if (action === "set") {
       // Called from the Android app during setup, or when the user
-      // taps "Reset web password" in Settings.
-      const snap = await userRef.get();
-      if (!snap.exists) {
-        return res.status(404).json({ error: "Access code not found." });
-      }
+      // taps "Reset web password" in Settings. Creates the user
+      // document if this is the very first thing to touch this
+      // access code (e.g. password set races the first data sync),
+      // rather than requiring some other write to have happened first.
       const passwordHash = await hashPassword(password);
-      await userRef.set({ passwordHash }, { merge: true });
+      await userRef.set({ passwordHash, accessCode: normalizedCode }, { merge: true });
       return res.status(200).json({ success: true });
     }
 
