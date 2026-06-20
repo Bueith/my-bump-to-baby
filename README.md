@@ -70,13 +70,30 @@ requires its own credential.
   user creates or resets their Web Password.
 - The website calls `/api/auth` with `action: "verify"` on every
   login attempt (the standalone login page, and the auth overlay
-  shown to returning browsers). Only on success does the website
-  receive the user's actual synced data.
+  shown to returning browsers). On success it receives the user's
+  synced data AND a signed session token.
+- Every subsequent save from the website (adding a village member,
+  ticking a checklist item, writing a diary entry, anything) goes
+  through `/api/auth` with `action: "save"`, sending the session
+  token instead of the password. The server checks the token's
+  signature and expiry (12 hours) before writing anything to
+  Firestore. This is the ONLY way the website writes data -- there
+  is no client-side Firebase SDK and no direct Firestore write from
+  the browser, since a client SDK has no way to prove a password was
+  ever checked.
 - A browser may remember an access code for convenience (so it's
   pre-filled in the password box), but this is purely cosmetic --
   every fresh page load requires the password to be verified again
-  before any real data is fetched or displayed. The app shell is
-  visually blurred behind a login overlay until that happens.
+  (a new session token issued) before any real data is fetched,
+  displayed, or saved. The app shell is visually blurred behind a
+  login overlay until that happens.
+
+Optional but recommended: set a `SESSION_SECRET` environment
+variable (any long random string) in Vercel. If unset, the session
+token signing falls back to a value derived from your Firebase
+service account key, which works but means rotating the service
+account key would also invalidate all active sessions. A dedicated
+`SESSION_SECRET` avoids that coupling.
 
 ## Deploying to Vercel
 

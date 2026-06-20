@@ -231,28 +231,51 @@
 
   /* ---------------------------------------------------
      FIREBASE SYNC LAYER
-     Reads from Firestore on open, writes on every save.
-     Falls back silently if offline or not configured.
+     Writes route through /api/auth's "save" action (server-side,
+     session-token gated) rather than the client Firebase SDK — see
+     syncToFirebase below for why.
      --------------------------------------------------- */
 
-  function getFirebase() {
-    return window._nurture_firebase || null;
+  // Session token issued by /api/auth on successful "verify" — proves
+  // the password check already happened, without re-sending the
+  // password on every single save. Stored in sessionStorage alongside
+  // the unlocked flag: gone the moment the tab closes, same lifetime
+  // as the rest of the unlock state.
+  const SESSION_TOKEN_KEY = "nurture_session_token";
+
+  function getSessionToken() {
+    try { return sessionStorage.getItem(SESSION_TOKEN_KEY) || ""; }
+    catch (e) { return ""; }
+  }
+
+  function setSessionToken(token) {
+    try {
+      if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+      else sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    } catch (e) { /* ignore */ }
   }
 
   async function syncToFirebase() {
-    const fb   = getFirebase();
-    const code = state.accessCode;
-    // Only sync once unlocked this session — never push/pull real
-    // data through the client SDK before password verification.
-    if (!fb || !code || !isUnlocked) return;
+    const code  = state.accessCode;
+    const token = getSessionToken();
+    // Only sync once unlocked this session, and only ever through the
+    // server — the client never writes to Firestore directly. The
+    // client SDK has no way to prove a password was checked, so a
+    // direct client write is either wide open (insecure, and exactly
+    // why earlier writes were silently failing against locked-down
+    // rules) or blocked outright. Routing through /api/auth's "save"
+    // action, gated by the session token from "verify", is what
+    // actually makes saves both possible and secure.
+    if (!code || !token || !isUnlocked) return;
     try {
-      const { db, doc, setDoc, serverTimestamp } = fb;
-      await setDoc(doc(db, "users", code), {
-        ...state,
-        lastSynced: serverTimestamp()
-      }, { merge: true });
+      await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save", code, token, data: state })
+      });
     } catch (e) {
-      // Silent — offline or quota exceeded, localStorage still has the data
+      // Silent — offline, localStorage still has the data and will
+      // sync next time saveState() runs successfully.
     }
   }
 
@@ -419,6 +442,7 @@
       };
       isUnlocked = true;
       setIsUnlocked(true);
+      setSessionToken(data.token || "");
       setRememberedCode(state.accessCode);
       saveState();
       onSuccess();
@@ -448,6 +472,7 @@
     e.preventDefault();
     isUnlocked = false;
     setIsUnlocked(false);
+    setSessionToken("");
     showMarketing();
   });
 
@@ -503,6 +528,7 @@
     setRememberedCode("");
     isUnlocked = false;
     setIsUnlocked(false);
+    setSessionToken("");
     state.accessCode = null;
     state.onboarded = false;
     saveState();

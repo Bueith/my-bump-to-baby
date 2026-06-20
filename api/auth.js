@@ -1,24 +1,36 @@
 // /api/auth.js
 //
-// Handles Web Password setup (called from the Android app) and
-// verification (called from the website login overlay). Passwords
-// are never stored or compared in plain text anywhere — this function
-// is the only place hashing/verification happens.
+// Handles Web Password setup (called from the Android app), login
+// verification, and session-token validation (both called from the
+// website). Passwords are never stored or compared in plain text
+// anywhere — this function is the only place hashing/verification
+// happens.
 //
-// Two actions, both POST:
-//   { action: "set",    code, password }  -> hash + store password for a code
-//   { action: "verify", code, password }  -> check password, return user data on success
+// Three actions, all POST:
+//   { action: "set",    code, password }            -> hash + store password for a code
+//   { action: "verify", code, password }             -> check password, return user data + a session token
+//   { action: "save",   code, token, data }          -> validate token, write data server-side (the ONLY
+//                                                        write path — the client never writes to Firestore
+//                                                        directly, since the client SDK has no way to prove
+//                                                        the password was checked)
 //
-// Uses Node's built-in crypto (scrypt) — no extra dependency needed,
-// unlike search.js's Readability/linkedom packages.
+// The session token is a signed, time-limited proof that a password
+// check already succeeded for this code, generated using HMAC against
+// a server-only secret (Node's built-in crypto). It is NOT a password
+// substitute long-term — it expires after a few hours and only ever
+// authorizes writes to its own access code's document.
+//
+// Uses Node's built-in crypto (scrypt + hmac) — no extra dependency
+// needed, unlike search.js's Readability/linkedom packages.
 
 import { initializeApp, getApps } from "firebase-admin/app";
 import { cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { randomBytes, scrypt as scryptCallback } from "crypto";
+import { randomBytes, scrypt as scryptCallback, createHmac, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
 const scrypt = promisify(scryptCallback);
+const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
 
 // Firebase Admin SDK init — separate from the client-side Firebase
 // config used in index.html. Requires a service account key set as
@@ -35,6 +47,42 @@ function getDb() {
     });
   }
   return getFirestore();
+}
+
+function getSessionSecret() {
+  // Falls back to a derivative of the service account key if a
+  // dedicated secret isn't set, so this works even before a separate
+  // SESSION_SECRET env var is configured — but setting SESSION_SECRET
+  // explicitly is recommended for production.
+  return process.env.SESSION_SECRET || process.env.FIREBASE_SERVICE_ACCOUNT_KEY || "nurture-fallback-secret";
+}
+
+function issueSessionToken(code) {
+  const expires = Date.now() + SESSION_TTL_MS;
+  const payload = `${code}.${expires}`;
+  const sig = createHmac("sha256", getSessionSecret()).update(payload).digest("hex");
+  return Buffer.from(`${payload}.${sig}`).toString("base64url");
+}
+
+function verifySessionToken(code, token) {
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf8");
+    const parts = decoded.split(".");
+    if (parts.length !== 3) return false;
+    const [tokenCode, expiresStr, sig] = parts;
+    if (tokenCode !== code) return false;
+    const expires = parseInt(expiresStr, 10);
+    if (!expires || Date.now() > expires) return false;
+
+    const expectedPayload = `${tokenCode}.${expiresStr}`;
+    const expectedSig = createHmac("sha256", getSessionSecret()).update(expectedPayload).digest("hex");
+    const a = Buffer.from(sig, "hex");
+    const b = Buffer.from(expectedSig, "hex");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch (e) {
+    return false;
+  }
 }
 
 async function hashPassword(password) {
@@ -63,13 +111,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { action, code, password } = req.body || {};
+  const { action, code, password, token, data: incomingData } = req.body || {};
 
-  if (!action || !code || !password) {
+  if (!action || !code) {
     return res.status(400).json({ error: "Missing required fields." });
-  }
-  if (typeof password !== "string" || password.length < 6) {
-    return res.status(400).json({ error: "Password must be at least 6 characters." });
   }
 
   const normalizedCode = String(code).toUpperCase().trim();
@@ -85,6 +130,9 @@ export default async function handler(req, res) {
 
   try {
     if (action === "set") {
+      if (typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters." });
+      }
       // Called from the Android app during setup, or when the user
       // taps "Reset web password" in Settings. Creates the user
       // document if this is the very first thing to touch this
@@ -96,6 +144,9 @@ export default async function handler(req, res) {
     }
 
     if (action === "verify") {
+      if (typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters." });
+      }
       const snap = await userRef.get();
       if (!snap.exists) {
         return res.status(404).json({ error: "That access code wasn't found." });
@@ -109,9 +160,34 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Incorrect password." });
       }
       // Success — return the user's data (minus the password hash)
-      // so the website can populate the app without a second fetch.
+      // plus a signed session token. The website stores this token
+      // (not the password) and sends it with every subsequent save,
+      // so we never need to ask for the password again until it
+      // expires or the tab is closed.
       const { passwordHash, ...userData } = data;
-      return res.status(200).json({ success: true, userData });
+      const sessionToken = issueSessionToken(normalizedCode);
+      return res.status(200).json({ success: true, userData, token: sessionToken });
+    }
+
+    if (action === "save") {
+      // The ONLY write path for the website. The client never writes
+      // to Firestore directly — the client SDK has no way to prove a
+      // password was checked, so direct client writes would either
+      // have to be wide open (insecure) or impossible (breaks the
+      // app). Routing saves through here, gated by the session token
+      // issued at "verify" time, is what actually closes that gap.
+      if (!token || !verifySessionToken(normalizedCode, token)) {
+        return res.status(401).json({ error: "Session expired. Please log in again." });
+      }
+      if (!incomingData || typeof incomingData !== "object") {
+        return res.status(400).json({ error: "Missing data to save." });
+      }
+      // Never let a save overwrite the password hash or access code,
+      // regardless of what the client sends — those are only ever
+      // touched by "set", never by a regular data save.
+      const { passwordHash, accessCode, ...safeData } = incomingData;
+      await userRef.set(safeData, { merge: true });
+      return res.status(200).json({ success: true });
     }
 
     return res.status(400).json({ error: "Unknown action." });

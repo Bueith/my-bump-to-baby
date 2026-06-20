@@ -611,32 +611,15 @@
     </div>
   </div>
 
-  <!-- Firebase SDK (loaded as modules, used by script.js via window.firebase) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp }
-      from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-    import { getAuth, signInAnonymously }
-      from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCkb6NyVCNtvok8W_POknIBmiaK9vkGvuE",
-      authDomain: "nurture-10afc.firebaseapp.com",
-      projectId: "nurture-10afc",
-      storageBucket: "nurture-10afc.firebasestorage.app",
-      messagingSenderId: "113649852193",
-      appId: "1:113649852193:web:3df23a455e1c374c662860",
-      measurementId: "G-WXL47YNTR0"
-    };
-
-    const app  = initializeApp(firebaseConfig);
-    const db   = getFirestore(app);
-    const auth = getAuth(app);
-
-    // Expose to the main script via window so the non-module
-    // script.js can call Firebase functions.
-    window._nurture_firebase = { db, auth, doc, getDoc, setDoc, updateDoc, serverTimestamp, signInAnonymously };
-  </script>
+  <!--
+    Note: there is deliberately no client-side Firebase SDK here.
+    All reads/writes go through /api/auth.js (server-side, using the
+    Firebase Admin SDK with a service account key), gated by password
+    verification and a signed session token. A client-side SDK with
+    open Firestore rules would let anyone with an access code read or
+    write that account's data with no password check at all — see
+    api/auth.js's header comment for the full reasoning.
+  -->
 
   <script src="script.js"></script>
 </body>
