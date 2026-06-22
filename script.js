@@ -356,15 +356,7 @@
     window.scrollTo(0, 0);
     document.getElementById("login-error").hidden = true;
     const codeInput = document.getElementById("login-code");
-    const remembered = getRememberedCode();
-    // Always pre-fill at least "NURTURE-" so the user knows the format
-    // and doesn't have to type the prefix. If a full code is remembered
-    // for this browser, use that; otherwise just the prefix as a hint.
-    codeInput.value = remembered || "NURTURE-";
-    // Position cursor at the end so typing continues after the prefix
-    setTimeout(() => {
-      codeInput.setSelectionRange(codeInput.value.length, codeInput.value.length);
-    }, 0);
+    codeInput.value = getRememberedCode();
     document.getElementById("login-password").value = "";
   }
 
@@ -401,14 +393,21 @@
     authOverlay.hidden = false;
     document.getElementById("auth-overlay-error").hidden = true;
     const codeInput = document.getElementById("auth-overlay-code");
-    const knownCode = state.accessCode || getRememberedCode();
-    // Always show at least "NURTURE-" so user knows the format.
-    // If we already know the full code for this browser, pre-fill it.
-    codeInput.value = knownCode || "NURTURE-";
-    setTimeout(() => {
-      codeInput.setSelectionRange(codeInput.value.length, codeInput.value.length);
-    }, 0);
+    codeInput.value = state.accessCode || getRememberedCode();
     document.getElementById("auth-overlay-password").value = "";
+  }
+
+  // Wipes all local state for this browser — used when an account no
+  // longer exists in Firebase, or when the user switches account.
+  // Resets to a clean defaultState so no stale village/care/diary
+  // data from the old account leaks through.
+  function clearLocalState() {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
+    setRememberedCode("");
+    setIsUnlocked(false);
+    setSessionToken("");
+    state = defaultState();
+    isUnlocked = false;
   }
 
   async function attemptUnlock(code, password, errorElId, onSuccess) {
@@ -422,6 +421,11 @@
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
+        // 404 = account deleted from Firebase — wipe local state so
+        // stale data from the old account doesn't persist in this browser.
+        if (response.status === 404) {
+          clearLocalState();
+        }
         errorEl.textContent = data.error || "Couldn't verify those details. Please try again.";
         errorEl.hidden = false;
         return false;
@@ -491,7 +495,7 @@
   });
 
   // Standalone login page (marketing -> Login)
-  async function submitLogin() {
+  document.getElementById("login-submit").addEventListener("click", async () => {
     const code     = document.getElementById("login-code").value.trim().toUpperCase();
     const password = document.getElementById("login-password").value;
     const btn      = document.getElementById("login-submit");
@@ -506,19 +510,10 @@
     await attemptUnlock(code, password, "login-error", () => showApp());
     btn.textContent = "Log in →";
     btn.disabled = false;
-  }
-
-  document.getElementById("login-submit").addEventListener("click", submitLogin);
-
-  // Enter key on either login field triggers submit
-  ["login-code", "login-password"].forEach((id) => {
-    document.getElementById(id)?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); submitLogin(); }
-    });
   });
 
   // Auth overlay (blurred app, returning browser)
-  async function submitOverlay() {
+  document.getElementById("auth-overlay-submit").addEventListener("click", async () => {
     const code     = document.getElementById("auth-overlay-code").value.trim().toUpperCase();
     const password = document.getElementById("auth-overlay-password").value;
     const btn      = document.getElementById("auth-overlay-submit");
@@ -538,15 +533,6 @@
     });
     btn.textContent = "Unlock →";
     btn.disabled = false;
-  }
-
-  document.getElementById("auth-overlay-submit").addEventListener("click", submitOverlay);
-
-  // Enter key on either overlay field triggers unlock
-  ["auth-overlay-code", "auth-overlay-password"].forEach((id) => {
-    document.getElementById(id)?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); submitOverlay(); }
-    });
   });
 
   // Uppercase the code as it's typed, on both login forms
@@ -557,13 +543,9 @@
   });
 
   document.getElementById("auth-overlay-different")?.addEventListener("click", () => {
-    setRememberedCode("");
-    isUnlocked = false;
-    setIsUnlocked(false);
-    setSessionToken("");
-    state.accessCode = null;
-    state.onboarded = false;
-    saveState();
+    // Full wipe — clears all local data from the old account so
+    // nothing leaks through when a different code is entered.
+    clearLocalState();
     showLogin();
   });
 
