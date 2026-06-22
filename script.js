@@ -356,7 +356,15 @@
     window.scrollTo(0, 0);
     document.getElementById("login-error").hidden = true;
     const codeInput = document.getElementById("login-code");
-    codeInput.value = getRememberedCode();
+    const remembered = getRememberedCode();
+    // Always pre-fill at least "NURTURE-" so the user knows the format
+    // and doesn't have to type the prefix. If a full code is remembered
+    // for this browser, use that; otherwise just the prefix as a hint.
+    codeInput.value = remembered || "NURTURE-";
+    // Position cursor at the end so typing continues after the prefix
+    setTimeout(() => {
+      codeInput.setSelectionRange(codeInput.value.length, codeInput.value.length);
+    }, 0);
     document.getElementById("login-password").value = "";
   }
 
@@ -393,7 +401,13 @@
     authOverlay.hidden = false;
     document.getElementById("auth-overlay-error").hidden = true;
     const codeInput = document.getElementById("auth-overlay-code");
-    codeInput.value = state.accessCode || getRememberedCode();
+    const knownCode = state.accessCode || getRememberedCode();
+    // Always show at least "NURTURE-" so user knows the format.
+    // If we already know the full code for this browser, pre-fill it.
+    codeInput.value = knownCode || "NURTURE-";
+    setTimeout(() => {
+      codeInput.setSelectionRange(codeInput.value.length, codeInput.value.length);
+    }, 0);
     document.getElementById("auth-overlay-password").value = "";
   }
 
@@ -477,7 +491,7 @@
   });
 
   // Standalone login page (marketing -> Login)
-  document.getElementById("login-submit").addEventListener("click", async () => {
+  async function submitLogin() {
     const code     = document.getElementById("login-code").value.trim().toUpperCase();
     const password = document.getElementById("login-password").value;
     const btn      = document.getElementById("login-submit");
@@ -492,10 +506,19 @@
     await attemptUnlock(code, password, "login-error", () => showApp());
     btn.textContent = "Log in →";
     btn.disabled = false;
+  }
+
+  document.getElementById("login-submit").addEventListener("click", submitLogin);
+
+  // Enter key on either login field triggers submit
+  ["login-code", "login-password"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submitLogin(); }
+    });
   });
 
   // Auth overlay (blurred app, returning browser)
-  document.getElementById("auth-overlay-submit").addEventListener("click", async () => {
+  async function submitOverlay() {
     const code     = document.getElementById("auth-overlay-code").value.trim().toUpperCase();
     const password = document.getElementById("auth-overlay-password").value;
     const btn      = document.getElementById("auth-overlay-submit");
@@ -515,6 +538,15 @@
     });
     btn.textContent = "Unlock →";
     btn.disabled = false;
+  }
+
+  document.getElementById("auth-overlay-submit").addEventListener("click", submitOverlay);
+
+  // Enter key on either overlay field triggers unlock
+  ["auth-overlay-code", "auth-overlay-password"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submitOverlay(); }
+    });
   });
 
   // Uppercase the code as it's typed, on both login forms
