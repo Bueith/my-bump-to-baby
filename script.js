@@ -441,19 +441,22 @@
       const fresh = defaultState();
       const cloud = data.userData || {};
       const localBase = state || fresh;
+      // Cloud always wins on login for village/care data — never merge
+      // with stale localStorage, since the phone may have made changes
+      // since the last website session.
       state = {
         ...fresh,
         ...localBase,
         ...cloud,
         today:   { ...fresh.today,   ...(localBase.today   || {}), ...(cloud.today   || {}) },
         village: {
-          members: (cloud.village?.members?.length ? cloud.village.members : localBase.village?.members) || fresh.village.members,
-          tasks:   (cloud.village?.tasks?.length   ? cloud.village.tasks   : localBase.village?.tasks)   || fresh.village.tasks
+          members: cloud.village?.members ?? fresh.village.members,
+          tasks:   cloud.village?.tasks   ?? fresh.village.tasks
         },
         care: {
-          contacts:     (cloud.care?.contacts?.length     ? cloud.care.contacts     : localBase.care?.contacts)     || fresh.care.contacts,
-          appointments: (cloud.care?.appointments?.length ? cloud.care.appointments : localBase.care?.appointments) || fresh.care.appointments,
-          diary:        (cloud.care?.diary?.length        ? cloud.care.diary        : localBase.care?.diary)        || fresh.care.diary
+          contacts:     cloud.care?.contacts     ?? fresh.care.contacts,
+          appointments: cloud.care?.appointments ?? fresh.care.appointments,
+          diary:        cloud.care?.diary        ?? fresh.care.diary
         },
         accessCode: code.toUpperCase().trim(),
         onboarded: true
