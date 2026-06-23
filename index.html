@@ -228,8 +228,33 @@
           </div>
         </div>
 
-        <div class="hero__actions" style="justify-content:center; margin: 20px 0;">
-          <a href="#download" class="btn btn--primary" id="register-download-link">Download the App</a>
+        <div style="margin: 20px 0;">
+          <button class="btn btn--primary btn--full" id="register-download-btn" style="width:100%;">
+            Download the App
+          </button>
+          <div id="register-download-panel" hidden style="margin-top:18px; text-align:center;">
+            <p style="font-size:0.9rem; color:var(--stone-600); margin-bottom:14px;">
+              Scan with your phone camera to download, or
+              <a href="https://play.google.com/store/apps/details?id=com.serene.motherhood"
+                 id="register-download-direct"
+                 target="_blank"
+                 rel="noopener"
+                 style="color:var(--sage-700); font-weight:600;">
+                click here to open on this device
+              </a>.
+            </p>
+            <img
+              id="register-qr"
+              src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.serene.motherhood"
+              alt="QR code to download Nurture app"
+              width="180"
+              height="180"
+              style="border-radius:12px; border:1px solid var(--stone-200); padding:8px; background:#fff;"
+            />
+            <p style="font-size:0.78rem; color:var(--stone-400); margin-top:10px;">
+              Available on Google Play
+            </p>
+          </div>
         </div>
 
         <div class="login-divider">

@@ -609,6 +609,16 @@
     e.preventDefault();
     showRegister();
   });
+
+  // Download button on register page — toggles QR code panel
+  document.getElementById("register-download-btn")?.addEventListener("click", () => {
+    const panel = document.getElementById("register-download-panel");
+    const btn   = document.getElementById("register-download-btn");
+    if (!panel) return;
+    const isOpen = !panel.hidden;
+    panel.hidden = isOpen;
+    btn.textContent = isOpen ? "Download the App" : "Hide download options";
+  });
   document.getElementById("goto-login")?.addEventListener("click", (e) => {
     e.preventDefault();
     showLogin();
