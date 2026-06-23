@@ -199,71 +199,69 @@
        on the mobile app, not the website
        ===================================================== -->
   <div id="register-view" class="view" hidden>
-    <div class="onboard-shell">
-      <div class="onboard-card">
-        <span class="onboard-emoji">📱</span>
-        <h1>Create your account on the app</h1>
-        <p>
-          For your safety, Nurture accounts are created on the mobile app, not the
-          website. This keeps your Web Access Code and Web Password tied to a real
-          device from the start.
-        </p>
+    <div class="register-shell">
+      <div class="register-landscape">
 
-        <div class="register-steps">
-          <div class="register-step">
-            <span class="register-step__num">1</span>
-            <span>Download and open the Nurture app on your phone</span>
-          </div>
-          <div class="register-step">
-            <span class="register-step__num">2</span>
-            <span>Complete the short setup — pick your stage and create a Web Password</span>
-          </div>
-          <div class="register-step">
-            <span class="register-step__num">3</span>
-            <span>Find your Web Access Code in Settings</span>
-          </div>
-          <div class="register-step">
-            <span class="register-step__num">4</span>
-            <span>Come back here and log in with your code and password</span>
+        <!-- LEFT: heading + steps -->
+        <div class="register-left">
+          <span class="register-icon">📱</span>
+          <h1 class="register-title">Create your account on the app</h1>
+          <p class="register-subtitle">
+            For your safety, Nurture accounts are created on the mobile app.
+            This keeps your Web Access Code and Web Password tied to a real device.
+          </p>
+          <div class="register-steps">
+            <div class="register-step">
+              <span class="register-step__num">1</span>
+              <span>Download and open the Nurture app on your phone</span>
+            </div>
+            <div class="register-step">
+              <span class="register-step__num">2</span>
+              <span>Complete setup — pick your stage and create a Web Password</span>
+            </div>
+            <div class="register-step">
+              <span class="register-step__num">3</span>
+              <span>Find your Web Access Code in Settings</span>
+            </div>
+            <div class="register-step">
+              <span class="register-step__num">4</span>
+              <span>Come back here and log in with your code and password</span>
+            </div>
           </div>
         </div>
 
-        <div style="margin: 20px 0;">
-          <button class="btn btn--primary" id="register-download-btn">
-            Download the App
-          </button>
-          <div id="register-download-panel" hidden style="margin-top:18px; text-align:center;">
-            <p style="font-size:0.9rem; color:var(--stone-600); margin-bottom:14px;">
-              Scan with your phone camera to download, or
-              <a href="https://play.google.com/store/apps/details?id=com.serene.motherhood"
-                 id="register-download-direct"
-                 target="_blank"
-                 rel="noopener"
-                 style="color:var(--sage-700); font-weight:600;">
-                click here to open on this device
-              </a>.
-            </p>
-            <img
-              id="register-qr"
-              src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.serene.motherhood"
-              alt="QR code to download Nurture app"
-              width="180"
-              height="180"
-              style="border-radius:12px; border:1px solid var(--stone-200); padding:8px; background:#fff;"
-            />
-            <p style="font-size:0.78rem; color:var(--stone-400); margin-top:10px;">
-              Available on Google Play
-            </p>
+        <!-- RIGHT: download action -->
+        <div class="register-right">
+          <div class="register-action-card">
+            <div id="register-download-panel" class="register-qr-block">
+              <img
+                id="register-qr"
+                src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.serene.motherhood"
+                alt="QR code to download Nurture app"
+                width="160"
+                height="160"
+              />
+              <p class="register-qr-label">Scan to download</p>
+              <a
+                href="https://play.google.com/store/apps/details?id=com.serene.motherhood"
+                id="register-download-direct"
+                target="_blank"
+                rel="noopener"
+                class="register-pc-link"
+              >
+                Or click here to download on this device
+              </a>
+            </div>
+            <button class="btn btn--primary btn--full" id="register-download-btn">
+              Download the App
+            </button>
+            <div class="login-divider"><span>already set up?</span></div>
+            <a href="#" id="goto-login" class="btn btn--ghost btn--full" style="text-decoration:none; text-align:center; display:block;">
+              Log in instead
+            </a>
           </div>
         </div>
 
-        <div class="login-divider">
-          <span>already set up?</span>
-        </div>
-
-        <a href="#" id="goto-login" class="btn btn--ghost btn--full" style="text-decoration:none; text-align:center; display:block;">
-          Log in instead
-        </a>
       </div>
     </div>
   </div>

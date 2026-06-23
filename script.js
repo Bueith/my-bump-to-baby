@@ -387,11 +387,18 @@
     hideAllViews();
     registerView.hidden = false;
     window.scrollTo(0, 0);
-    // Reset download panel to collapsed state each time
+    // QR block hidden by default — shown when Download button is clicked
     const panel = document.getElementById("register-download-panel");
     const btn   = document.getElementById("register-download-btn");
-    if (panel) panel.hidden = true;
-    if (btn)   btn.textContent = "Download the App";
+    if (panel) panel.style.display = "none";
+    if (btn) {
+      btn.textContent = "Download the App";
+      btn.onclick = () => {
+        const isVisible = panel.style.display !== "none";
+        panel.style.display = isVisible ? "none" : "flex";
+        btn.textContent = isVisible ? "Download the App" : "Hide download options";
+      };
+    }
   }
 
   // Shows the standalone full-page login (used from the marketing
@@ -615,15 +622,7 @@
     showRegister();
   });
 
-  // Download button on register page — toggles QR code panel
-  document.getElementById("register-download-btn")?.addEventListener("click", () => {
-    const panel = document.getElementById("register-download-panel");
-    const btn   = document.getElementById("register-download-btn");
-    if (!panel) return;
-    const isOpen = !panel.hidden;
-    panel.hidden = isOpen;
-    btn.textContent = isOpen ? "Download the App" : "Hide download options";
-  });
+
   document.getElementById("goto-login")?.addEventListener("click", (e) => {
     e.preventDefault();
     showLogin();

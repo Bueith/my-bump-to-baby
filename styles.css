@@ -1302,3 +1302,111 @@ img { max-width: 100%; display: block; }
   align-items: center;
   justify-content: center;
 }
+
+/* ── Register page — landscape two-column layout ─────────────────── */
+.register-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--sage-100) 0%, var(--cream-100) 55%, var(--rose-50) 100%);
+  padding: 24px;
+}
+
+.register-landscape {
+  display: flex;
+  gap: 48px;
+  align-items: center;
+  max-width: 900px;
+  width: 100%;
+  background: var(--cream-50);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lift);
+  padding: 48px;
+}
+
+.register-left {
+  flex: 1;
+  text-align: left;
+}
+
+.register-icon {
+  font-size: 2.4rem;
+  display: block;
+  margin-bottom: 14px;
+}
+
+.register-title {
+  font-size: 1.8rem;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  color: var(--sage-900);
+}
+
+.register-subtitle {
+  font-size: 0.92rem;
+  color: var(--stone-600);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.register-right {
+  flex: 0 0 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.register-action-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+.register-qr-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  background: var(--sage-50);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--sage-200);
+  width: 100%;
+}
+
+.register-qr-block img {
+  border-radius: 8px;
+  border: 1px solid var(--stone-200);
+  padding: 6px;
+  background: #fff;
+}
+
+.register-qr-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--stone-500);
+  margin: 0;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.register-pc-link {
+  font-size: 0.8rem;
+  color: var(--sage-700);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: underline;
+}
+
+/* On mobile — stack to single column */
+@media (max-width: 680px) {
+  .register-landscape {
+    flex-direction: column;
+    padding: 28px 20px;
+    gap: 28px;
+  }
+  .register-right { width: 100%; }
+  .register-title { font-size: 1.4rem; }
+}
+
