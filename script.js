@@ -279,6 +279,47 @@
     }
   }
 
+  // Pulls the latest data from Firestore using the current session token.
+  // Called by the manual refresh button so the user can pick up phone
+  // changes without logging out and back in.
+  async function syncFromCloud() {
+    const code  = state.accessCode;
+    const token = getSessionToken();
+    if (!code || !token || !isUnlocked) return;
+    const btn = document.getElementById("cloud-refresh-btn");
+    if (btn) { btn.textContent = "Syncing…"; btn.disabled = true; }
+    try {
+      const response = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "fetch", code, token })
+      });
+      const result = await response.json();
+      if (response.ok && result.success && result.userData) {
+        const cloud = result.userData;
+        state.village = {
+          members: cloud.village?.members ?? state.village?.members ?? [],
+          tasks:   cloud.village?.tasks   ?? state.village?.tasks   ?? []
+        };
+        state.care = {
+          contacts:     cloud.care?.contacts     ?? state.care?.contacts     ?? [],
+          appointments: cloud.care?.appointments ?? state.care?.appointments ?? [],
+          diary:        cloud.care?.diary        ?? state.care?.diary        ?? []
+        };
+        if (cloud.name)  state.name  = cloud.name;
+        if (cloud.stage) state.stage = cloud.stage;
+        saveState();
+        renderAll();
+        if (btn) { btn.textContent = "✓ Synced"; }
+        setTimeout(() => { if (btn) { btn.textContent = "Refresh"; btn.disabled = false; } }, 2000);
+      } else {
+        if (btn) { btn.textContent = "Refresh"; btn.disabled = false; }
+      }
+    } catch (e) {
+      if (btn) { btn.textContent = "Refresh"; btn.disabled = false; }
+    }
+  }
+
   function todayKey() {
     return new Date().toISOString().slice(0, 10);
   }
@@ -488,6 +529,7 @@
   }
 
   document.getElementById("nav-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
+  document.getElementById("cloud-refresh-btn")?.addEventListener("click", () => syncFromCloud());
   document.getElementById("hero-launch-app").addEventListener("click", (e) => { e.preventDefault(); launchApp(); });
   document.getElementById("app-exit").addEventListener("click", (e) => {
     e.preventDefault();

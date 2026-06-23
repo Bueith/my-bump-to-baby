@@ -562,6 +562,25 @@ img { max-width: 100%; display: block; }
 }
 .app-nav__exit:hover { color: var(--sage-700); }
 
+.app-nav__refresh {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: var(--sage-700);
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--stone-100);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s;
+}
+.app-nav__refresh:hover { background: var(--sage-50); }
+.app-nav__refresh:disabled { opacity: 0.5; cursor: default; }
+
 .app-main { flex: 1; padding: 36px 40px 100px; max-width: 880px; }
 
 .panel-header { margin-bottom: 28px; }
@@ -802,7 +821,7 @@ img { max-width: 100%; display: block; }
     border-top: 1px solid var(--stone-200);
     z-index: 50;
   }
-  .app-nav__brand, .app-nav__exit { display: none; }
+  .app-nav__brand, .app-nav__exit, .app-nav__refresh { display: none; }
   .app-nav__item { flex-direction: column; gap: 3px; padding: 6px 8px; font-size: 0.68rem; flex: 1; }
   .app-nav__icon { font-size: 1.25rem; }
 

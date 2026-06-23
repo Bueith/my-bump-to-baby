@@ -190,6 +190,21 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
 
+    if (action === "fetch") {
+      // Read the latest data from Firestore, gated by the session token.
+      // Used by the website's manual refresh button to pull phone changes
+      // without requiring a full logout/login cycle.
+      if (!token || !verifySessionToken(normalizedCode, token)) {
+        return res.status(401).json({ error: "Session expired. Please log in again." });
+      }
+      const snap = await userRef.get();
+      if (!snap.exists) {
+        return res.status(404).json({ error: "Account not found." });
+      }
+      const { passwordHash, ...userData } = snap.data();
+      return res.status(200).json({ success: true, userData });
+    }
+
     return res.status(400).json({ error: "Unknown action." });
   } catch (err) {
     return res.status(500).json({ error: "Unexpected server error.", detail: String(err) });
