@@ -387,6 +387,11 @@
     hideAllViews();
     registerView.hidden = false;
     window.scrollTo(0, 0);
+    // Reset download panel to collapsed state each time
+    const panel = document.getElementById("register-download-panel");
+    const btn   = document.getElementById("register-download-btn");
+    if (panel) panel.hidden = true;
+    if (btn)   btn.textContent = "Download the App";
   }
 
   // Shows the standalone full-page login (used from the marketing
