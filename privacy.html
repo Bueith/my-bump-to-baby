@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nurture — Privacy Policy</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body { background: #FAF7F2; color: #2E3D32; }
+  .policy {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+    font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  .policy h1 {
+    font-family: "Fraunces", serif;
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+    color: #2E5D3F;
+  }
+  .policy h2 {
+    font-family: "Fraunces", serif;
+    font-size: 1.4rem;
+    margin-top: 36px;
+    margin-bottom: 8px;
+    color: #2E5D3F;
+  }
+  .policy .effective { color: #6E6B66; font-size: 0.9rem; margin-bottom: 36px; }
+  .policy p, .policy li { font-size: 1rem; }
+  .policy ul { padding-left: 22px; }
+  .policy a { color: #2E5D3F; }
+  .policy .back { display: inline-block; margin-top: 32px; }
+</style>
+</head>
+<body>
+  <main class="policy">
+    <h1>Privacy Policy</h1>
+    <p class="effective">Effective 25 June 2026 · Nurture by eCape Dev Studio</p>
+
+    <p>This policy explains what data Nurture collects, why we collect it, where it goes, and what control you have over it. We've kept this in plain language on purpose — if anything is unclear, email us at <a href="mailto:etudetc@gmail.com">etudetc@gmail.com</a>.</p>
+
+    <h2>Who runs Nurture</h2>
+    <p>Nurture is built and operated by eCape Dev Studio. Contact for any privacy question, data request, or complaint: <a href="mailto:etudetc@gmail.com">etudetc@gmail.com</a>.</p>
+
+    <h2>What we collect</h2>
+    <p>Only the information you give us directly:</p>
+    <ul>
+      <li><strong>Your name</strong> — entered during onboarding so the app can greet you.</li>
+      <li><strong>Your stage and week</strong> — pregnancy or postpartum, used to tailor content.</li>
+      <li><strong>Your daily logs</strong> — mood, sleep, energy, kicks, feeds, nappy counts, symptoms, and any notes you write.</li>
+      <li><strong>Your Village entries</strong> — names, roles, and phone numbers of people you add yourself.</li>
+      <li><strong>Your Care entries</strong> — appointments, emergency contacts, and private diary entries.</li>
+      <li><strong>A web access code and web password</strong> — needed to log in on the website. The password is stored only as a one-way hash; it cannot be recovered or read by us.</li>
+      <li><strong>Crash reports</strong> — when the app crashes, Firebase Crashlytics sends us a technical report (device model, Android version, where the crash happened). No personal content is included.</li>
+    </ul>
+
+    <p>We do <strong>not</strong> collect: your location, your contacts, your photos, your browsing history, your microphone audio (voice input is processed by Android on-device and only the resulting text reaches us), advertising identifiers, or any data from third-party trackers. There are no ads in Nurture.</p>
+
+    <h2>Where your data is stored</h2>
+    <p>Two places, both yours:</p>
+    <ul>
+      <li><strong>On your phone</strong> — in encrypted local storage that only Nurture can read.</li>
+      <li><strong>In Firebase Firestore</strong> (Google Cloud, europe-west1) — so the data also appears when you log into Nurture on the website. Each user's data is in a separate document protected by security rules that only your device can read or write.</li>
+    </ul>
+    <p>We do not sell, share, or rent your data to any third party. We do not use it for advertising. We do not use it to train AI models.</p>
+
+    <h2>Voice input</h2>
+    <p>Where the app offers voice input (e.g. the daily log or Companion search), it uses Android's built-in speech recognition. The audio is processed by your device or by Google's speech service on your behalf — Nurture never receives the audio itself, only the recognised text once you finish speaking. You can use the keyboard instead at any time.</p>
+
+    <h2>The Companion (AI Q&A)</h2>
+    <p>When you ask a question in the Companion, Nurture first tries to match it against a small, hand-written set of answers stored in the app. If nothing matches, your question is sent to a search service (Serper.dev) which queries trusted medical sources (NHS, ACOG, Mayo Clinic and similar). Your name and other personal data are never sent with the question — only the question text itself.</p>
+
+    <h2>Children</h2>
+    <p>Nurture is for adults. We do not knowingly collect data from anyone under 18. If you believe a child has used the app, email us and we'll delete the account immediately.</p>
+
+    <h2>Your rights</h2>
+    <p>At any time you can:</p>
+    <ul>
+      <li><strong>Export your data</strong> — Settings → Export My Data gives you a JSON file with everything you've entered. We never receive a copy.</li>
+      <li><strong>Reset everything on your phone</strong> — Settings → Reset App Data wipes the local copy.</li>
+      <li><strong>Request deletion of your cloud data</strong> — email <a href="mailto:etudetc@gmail.com">etudetc@gmail.com</a> with your access code (the NURTURE-XXXXX code shown in Settings) and we'll delete the Firestore record within 7 days.</li>
+      <li><strong>Ask what we hold about you</strong> — same email, we'll respond within 30 days.</li>
+    </ul>
+
+    <h2>Security</h2>
+    <p>We use industry-standard practices: passwords are hashed with scrypt and a per-password salt, sessions are signed with HMAC and expire after 12 hours, the website rate-limits password attempts to protect against brute-forcing, and Firestore security rules ensure your document can only be read or written by your own device. We cannot promise perfect security — no service can — but we'll tell you within 72 hours if we ever learn of a breach affecting your data.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>If we ever change what we collect or how we use it, we'll update this page and bump the effective date at the top. For material changes, we'll also notify users in-app before the change takes effect.</p>
+
+    <h2>Contact</h2>
+    <p>eCape Dev Studio · <a href="mailto:etudetc@gmail.com">etudetc@gmail.com</a></p>
+
+    <a class="back" href="/">← Back to Nurture</a>
+  </main>
+</body>
+</html>
