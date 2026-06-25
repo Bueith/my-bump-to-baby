@@ -32,6 +32,13 @@ import { promisify } from "util";
 const scrypt = promisify(scryptCallback);
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
 
+// Rate-limiting for password attempts. Five wrong attempts per access
+// code per hour and we start refusing — keeps anyone from brute-forcing
+// weak passwords against a known code. State lives in the user's
+// Firestore doc itself so we don't need a separate KV store.
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MS    = 1000 * 60 * 60; // 1 hour
+
 // Firebase Admin SDK init — separate from the client-side Firebase
 // config used in index.html. Requires a service account key set as
 // an environment variable (FIREBASE_SERVICE_ACCOUNT_KEY, the full
@@ -155,16 +162,47 @@ export default async function handler(req, res) {
       if (!data.passwordHash) {
         return res.status(400).json({ error: "This account hasn't set a web password yet. Set one in the phone app's Settings." });
       }
+
+      // Rate-limit check. Read attempts state, reset the window if it
+      // has expired, and refuse outright if we're already at the cap.
+      const now = Date.now();
+      const attemptsCount = data.rl_attempts || 0;
+      const windowStart   = data.rl_window_start || 0;
+      const windowAge     = now - windowStart;
+      let effectiveCount  = attemptsCount;
+      let effectiveStart  = windowStart;
+      if (windowAge > RATE_LIMIT_WINDOW_MS) {
+        // The previous window has expired — start fresh.
+        effectiveCount = 0;
+        effectiveStart = now;
+      }
+      if (effectiveCount >= RATE_LIMIT_MAX_ATTEMPTS) {
+        const minutesLeft = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - effectiveStart)) / 60000);
+        return res.status(429).json({
+          error: `Too many attempts. Please try again in about ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}.`
+        });
+      }
+
       const valid = await verifyPassword(password, data.passwordHash);
       if (!valid) {
+        // Bump the counter on every failed attempt — this is the gate
+        // that makes brute-forcing impractical.
+        await userRef.set({
+          rl_attempts: effectiveCount + 1,
+          rl_window_start: effectiveStart
+        }, { merge: true });
         return res.status(401).json({ error: "Incorrect password." });
       }
-      // Success — return the user's data (minus the password hash)
-      // plus a signed session token. The website stores this token
-      // (not the password) and sends it with every subsequent save,
-      // so we never need to ask for the password again until it
-      // expires or the tab is closed.
-      const { passwordHash, ...userData } = data;
+
+      // Success — reset the rate-limit counter so a legitimate user
+      // who finally remembered their password doesn't carry forward a
+      // near-full attempt count into the next session.
+      await userRef.set({
+        rl_attempts: 0,
+        rl_window_start: 0
+      }, { merge: true });
+
+      const { passwordHash, rl_attempts, rl_window_start, ...userData } = data;
       const sessionToken = issueSessionToken(normalizedCode);
       return res.status(200).json({ success: true, userData, token: sessionToken });
     }
