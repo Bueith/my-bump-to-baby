@@ -1453,3 +1453,153 @@ img { max-width: 100%; display: block; }
   .register-title { font-size: 1.4rem; }
 }
 
+
+/* ── Today's Moment card ───────────────────────────────────── */
+.card--moment {
+  background: linear-gradient(135deg, var(--color-tertiary-fixed, #d8eddb) 0%, var(--color-surface, #fff) 100%);
+  padding: 28px 24px 24px;
+}
+.moment-prompt {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-primary, #2E5D3F);
+  margin-bottom: 18px;
+}
+.moment-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+  animation: fadeSlideIn 0.28s ease;
+}
+.moment-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-on-surface-variant, #555);
+  margin-bottom: 4px;
+  display: block;
+}
+.energy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.energy-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-primary, #2E5D3F);
+}
+.energy-label { font-size: 0.78rem; color: var(--color-on-surface-variant, #666); }
+.stage-quick-field input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-outline-variant, #ccc);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  background: rgba(255,255,255,0.7);
+}
+.moment-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  animation: fadeIn 0.22s ease;
+}
+.moment-summary__text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--color-on-surface-variant, #555);
+}
+
+/* ── Streak chip ────────────────────────────────────────────── */
+.panel-header--home {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.streak-chip {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary, #2E5D3F);
+  background: rgba(46,93,63,0.1);
+  border-radius: 99px;
+  padding: 4px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+/* ── Wind-down banner ───────────────────────────────────────── */
+.wind-down-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(46,93,63,0.08);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: var(--color-primary, #2E5D3F);
+  animation: fadeSlideIn 0.3s ease;
+}
+.wind-down-banner button { flex-shrink: 0; }
+
+/* ── Sync toast ─────────────────────────────────────────────── */
+.sync-toast {
+  text-align: center;
+  font-size: 0.82rem;
+  background: rgba(46,93,63,0.12);
+  color: var(--color-primary, #2E5D3F);
+  border-radius: 99px;
+  padding: 6px 18px;
+  margin-bottom: 12px;
+  animation: fadeIn 0.25s ease;
+}
+
+/* ── Daily tip card ─────────────────────────────────────────── */
+.card--tip {
+  background: linear-gradient(135deg, rgba(46,93,63,0.06) 0%, rgba(255,255,255,0) 100%);
+}
+.tip-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary, #2E5D3F);
+  margin-bottom: 6px;
+}
+.tip-text {
+  font-size: 0.95rem;
+  color: var(--color-on-surface, #333);
+  line-height: 1.55;
+}
+
+/* ── Chip rows ──────────────────────────────────────────────── */
+.chip-row--col {
+  flex-direction: column;
+  align-items: stretch;
+}
+.chip-row--col .chip {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+
+/* ── Follow-up chips ────────────────────────────────────────── */
+.followup-chips {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0,0,0,0.07);
+}
+.followup-chips .chip-row { gap: 8px; }
+
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

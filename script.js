@@ -170,11 +170,13 @@
       onboarded: false,
       accessCode: null,        // set only after successful password verification
       checklist: [],
+      todayMomentSaved: false,
       today: {
         dayKey: todayKey(),
         sleep: 0,
-        energy: null,
+        energy: 3,
         mood: null,
+        quickField: "",
         // Pregnant
         kicks: 0,
         symptoms: [],
@@ -185,6 +187,7 @@
         pain: null
       },
       history: [],
+      todayMomentSaved: false,
       circle: [],
       care: {
         appointments: [],
@@ -207,6 +210,7 @@
         ...fresh,
         ...saved,
         today:  { ...fresh.today, ...(saved.today || {}) },
+        todayMomentSaved: saved.todayMomentSaved || false,
         circle: saved.circle || fresh.circle,
         care: {
           appointments: saved.care?.appointments || fresh.care.appointments,
@@ -292,6 +296,8 @@
       const result = await response.json();
       if (response.ok && result.success && result.userData) {
         const cloud = result.userData;
+        const hadData = (state.circle && state.circle.length) ||
+                          (state.care && state.care.appointments && state.care.appointments.length);
         state.circle = cloud.circle ?? state.circle ?? [];
         state.care = {
           appointments: cloud.care?.appointments ?? state.care?.appointments ?? [],
@@ -301,6 +307,7 @@
         if (cloud.stage) state.stage = cloud.stage;
         saveState();
         renderAll();
+        showSyncToast();
         if (btn) { btn.textContent = "✓ Synced"; }
         setTimeout(() => { if (btn) { btn.textContent = "Refresh"; btn.disabled = false; } }, 2000);
       } else {
@@ -744,30 +751,113 @@
     const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
     document.getElementById("home-greeting").textContent = `${greeting}, ${state.name} 🌿`;
 
-    // Mood selector
+    // ── Streak indicator ────────────────────────────────────────
+    const streak = computeStreak();
+    const streakChip = document.getElementById("streak-chip");
+    if (streak >= 2) {
+      streakChip.hidden = false;
+      document.getElementById("streak-count").textContent = streak + " day streak";
+    } else {
+      streakChip.hidden = true;
+    }
+
+    // ── Evening wind-down banner (after 6pm, no mood yet, not dismissed) ──
+    const windDownBanner = document.getElementById("wind-down-banner");
+    const windDownDismissedKey = "nurture_winddown_" + todayKey();
+    const windDownDismissed = (() => { try { return sessionStorage.getItem(windDownDismissedKey); } catch(e) { return null; } })();
+    if (hour >= 18 && !state.today.mood && !windDownDismissed) {
+      windDownBanner.hidden = false;
+    } else {
+      windDownBanner.hidden = true;
+    }
+    const dismissBtn = document.getElementById("wind-down-dismiss");
+    if (dismissBtn && !dismissBtn._bound) {
+      dismissBtn._bound = true;
+      dismissBtn.addEventListener("click", () => {
+        try { sessionStorage.setItem(windDownDismissedKey, "1"); } catch(e) {}
+        windDownBanner.hidden = true;
+      });
+    }
+
+    // ── Today's Moment card ─────────────────────────────────────
+    // Three states: mood grid → expanded → saved summary
     const moodRow = document.getElementById("mood-row");
+    const expanded = document.getElementById("moment-expanded");
+    const summary  = document.getElementById("moment-summary");
+
     moodRow.innerHTML = MOODS.map((m) => `
-      <button class="mood-btn ${state.today.mood === m.value ? 'is-selected' : ''}"
+      <button class="mood-btn ${state.today.mood === m.value ? "is-selected" : ""}"
               data-mood="${m.value}" aria-label="${m.label}">
         <span class="mood-btn__emoji">${m.emoji}</span>
         <span class="mood-btn__label">${m.label}</span>
       </button>`).join("");
 
+    if (state.todayMomentSaved && state.today.mood) {
+      expanded.hidden = true;
+      summary.hidden = false;
+      const mood = MOODS.find((m) => m.value === state.today.mood);
+      document.getElementById("moment-summary-text").textContent =
+        `Feeling ${mood ? mood.label.toLowerCase() : state.today.mood} · Energy ${state.today.energy || 3}/5`;
+    } else if (state.today.mood) {
+      expanded.hidden = false;
+      summary.hidden = true;
+      // Stage-aware quick field
+      const qf = document.getElementById("stage-quick-field");
+      const qfLabel = isPregnant ? "Any kicks today?" : "Feeds so far today?";
+      const qfName  = isPregnant ? "kicks" : "feeds";
+      const qfVal   = isPregnant ? (state.today.kicks || "") : (state.today.feedingStatus || "");
+      qf.innerHTML = `
+        <label class="moment-label">${qfLabel}</label>
+        <input type="text" name="${qfName}" placeholder="${isPregnant ? "e.g. 10" : "e.g. 4"}" value="${escapeHtml(String(qfVal))}" />`;
+      const slider = document.getElementById("energy-slider");
+      if (slider) slider.value = state.today.energy || 3;
+    } else {
+      expanded.hidden = true;
+      summary.hidden = true;
+    }
+
     moodRow.querySelectorAll(".mood-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         state.today.mood = btn.dataset.mood;
-        saveState();
-        renderHome();
-        renderPulse();
+        state.todayMomentSaved = false;
+        saveState(); renderHome(); renderPulse();
       });
     });
 
-    // Checklist
+    const saveBtn = document.getElementById("save-moment-btn");
+    if (saveBtn && !saveBtn._bound) {
+      saveBtn._bound = true;
+      saveBtn.addEventListener("click", () => {
+        const slider = document.getElementById("energy-slider");
+        if (slider) state.today.energy = parseInt(slider.value, 10);
+        const qfInput = document.querySelector("#stage-quick-field input");
+        if (qfInput) {
+          if (isPregnant) state.today.kicks = parseInt(qfInput.value, 10) || 0;
+          else state.today.feedingStatus = qfInput.value;
+        }
+        state.todayMomentSaved = true;
+        saveState(); renderHome(); renderPulse();
+      });
+    }
+
+    const updateBtn = document.getElementById("update-moment-btn");
+    if (updateBtn && !updateBtn._bound) {
+      updateBtn._bound = true;
+      updateBtn.addEventListener("click", () => {
+        state.todayMomentSaved = false;
+        renderHome();
+      });
+    }
+
+    // ── Checklist — only visible after mood logged ──────────────
+    const checklistCard = document.getElementById("checklist-card");
+    if (checklistCard) checklistCard.hidden = !state.today.mood;
+
     const checklistEl = document.getElementById("home-checklist");
     checklistEl.innerHTML = state.checklist.length === 0
       ? `<p class="muted-text">No items yet — add some below or pick from suggestions.</p>`
       : state.checklist.map((item) => `
-          <li class="${item.done ? 'is-done' : ''}">
+          <li class="${item.done ? "is-done" : ""}">
             <label>
               <input type="checkbox" data-check-id="${item.id}" ${item.done ? "checked" : ""} />
               <span>${escapeHtml(item.label)}</span>
@@ -788,7 +878,6 @@
       });
     });
 
-    // Suggestions panel
     const suggestEl = document.getElementById("checklist-suggestions");
     const suggestions = CHECKLIST_SUGGESTIONS[state.stage] || [];
     const existing = state.checklist.map((i) => i.label);
@@ -796,7 +885,6 @@
     suggestEl.innerHTML = available.map((s) => `
       <button class="chip suggest-chip" data-suggest="${escapeHtml(s)}">${escapeHtml(s)}</button>`
     ).join("");
-
     suggestEl.querySelectorAll(".suggest-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         state.checklist.push({ id: "c" + Date.now(), label: chip.dataset.suggest, done: false });
@@ -804,9 +892,25 @@
       });
     });
 
-    // "I've had my baby" transition card — only shown to pregnant users
     const transitionCard = document.getElementById("baby-arrived-card");
     if (transitionCard) transitionCard.hidden = state.stage !== "pregnant";
+  }
+
+  // ── Streak computation ──────────────────────────────────────
+  function computeStreak() {
+    const today = todayKey();
+    let streak = state.today.mood ? 1 : 0;
+    if (streak === 0) return 0;
+    const history = [...(state.history || [])].sort((a, b) => b.dayKey?.localeCompare(a.dayKey));
+    let prev = new Date(today);
+    for (const day of history) {
+      if (!day.mood) continue;
+      prev.setDate(prev.getDate() - 1);
+      const expected = prev.toISOString().slice(0, 10);
+      if (day.dayKey === expected) streak++;
+      else break;
+    }
+    return streak;
   }
 
   // Add checklist item manually
@@ -1107,6 +1211,23 @@
 
       resultsEl.innerHTML = bestHtml + moreLabel + restHtml + `
         <p class="trusted-search__disclosure">Results from trusted medical and pregnancy organisations. We never store or share what you search.</p>`;
+      // Follow-up chips
+      const fw = document.getElementById("followup-chips");
+      if (fw) {
+        fw.hidden = false;
+        const FOLLOWUPS = ["Tell me more", "When should I see a doctor?", "Is there a more natural option?"];
+        const chipRow = fw.querySelector(".chip-row");
+        if (chipRow) {
+          chipRow.innerHTML = FOLLOWUPS.map((f) => `<button class="chip" data-fq="${escapeHtml(f)}">${escapeHtml(f)}</button>`).join("");
+          chipRow.querySelectorAll("[data-fq]").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const input = document.getElementById("app-search-input");
+              if (input) { input.value = btn.dataset.fq; input.dispatchEvent(new Event("input")); }
+              fw.hidden = true;
+            });
+          });
+        }
+      }
     } catch (err) {
       resultsEl.innerHTML = `<p class="trusted-card__error">Something went wrong. Please try again.</p>`;
     }
@@ -1440,6 +1561,137 @@
   });
 
   /* ---------------------------------------------------
+     15b. COMPANION ENHANCEMENTS
+     Daily rotating tip, suggested questions, follow-up chips
+     --------------------------------------------------- */
+  const PREGNANCY_TIPS = [
+    "Staying hydrated helps reduce headaches and fatigue — even small sips throughout the day make a difference.",
+    "A short walk, even 10 minutes, can lift your mood and ease restless legs.",
+    "Your body is doing extraordinary work right now. Rest is productive.",
+    "Talking to your baby, even now, builds a connection you'll both carry forward.",
+    "Pelvic floor exercises can be done anywhere — sitting, standing, waiting.",
+    "Pregnancy brain is real. Writing things down isn't a weakness; it's wisdom.",
+    "Your appetite changes are normal. Honour what your body asks for.",
+    "Sleep on your left side when you can — it improves blood flow to the baby.",
+    "Gentle stretching before bed can reduce cramps and help you sleep.",
+    "You don't need to have everything figured out. One day, one step.",
+    "Asking for help is one of the strongest things you can do right now.",
+    "Your feelings about the birth are valid — all of them.",
+    "Iron-rich foods like spinach and lentils can help with fatigue.",
+    "Your relationship is changing too. That's normal and worth talking about.",
+    "The worry you feel is love already at work."
+  ];
+  const POSTPARTUM_TIPS = [
+    "Sleep when you can, even if it's not when the baby sleeps. Rest in any form counts.",
+    "Your body just did something remarkable. Healing takes time — be patient with it.",
+    "Feeding your baby, however you do it, is the right way.",
+    "Baby blues in the first two weeks are very common. If they last longer, tell someone.",
+    "You're allowed to have a hard day and still be a wonderful parent.",
+    "Getting outside, even briefly, can reset your nervous system.",
+    "Accepting help isn't failing. It's how communities have always raised children.",
+    "Your feelings about your body right now are valid. Healing isn't linear.",
+    "Partner tension after a baby is common. Short, kind conversations help.",
+    "Feeding cues are more reliable than a clock. Trust your baby.",
+    "You don't have to love every moment. Showing up is enough.",
+    "Cluster feeding is exhausting and completely normal.",
+    "Write down one small thing that went well today. It rewires the brain.",
+    "Your identity is expanding, not disappearing. Both can be true at once.",
+    "Reaching out when it's hard is the bravest thing you can do."
+  ];
+  const PREGNANCY_QUESTIONS = [
+    "Is this cramping normal?",
+    "How can I feel less anxious about birth?",
+    "What pregnancy symptoms need a doctor?",
+    "Is it normal to feel exhausted all the time?",
+    "Why am I so emotional lately?",
+    "Is it safe to exercise this trimester?",
+    "What foods should I really avoid?",
+    "Why am I not feeling kicks today?",
+    "How will I know I'm in labour?",
+    "Is back pain something to worry about?",
+    "What should be in my hospital bag?",
+    "Is it normal to feel disconnected from my pregnancy?",
+    "Why can't I sleep?"
+  ];
+  const POSTPARTUM_QUESTIONS = [
+    "Is it normal for my baby to cluster feed?",
+    "How can I feel less overwhelmed?",
+    "What postpartum symptoms need a doctor?",
+    "How much sleep is realistic right now?",
+    "Why do I cry over small things?",
+    "Is my baby feeding enough?",
+    "Why doesn't breastfeeding feel natural?",
+    "Is it normal to miss my pre-baby life?",
+    "How do I know if it's baby blues or more?",
+    "When can I start exercising again?",
+    "Is it okay to feel angry sometimes?",
+    "When will my body feel like mine again?"
+  ];
+
+  function getDayOfYear() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = now - start;
+    return Math.floor(diff / 86400000);
+  }
+
+  function renderCompanionExtras() {
+    const doy    = getDayOfYear();
+    const tips   = state.stage === "pregnant" ? PREGNANCY_TIPS   : POSTPARTUM_TIPS;
+    const qPool  = state.stage === "pregnant" ? PREGNANCY_QUESTIONS : POSTPARTUM_QUESTIONS;
+
+    // Daily tip — deterministic by day
+    const tipEl = document.getElementById("daily-tip-text");
+    if (tipEl) tipEl.textContent = tips[doy % tips.length];
+
+    // 3 rotating suggested questions
+    const sqEl = document.getElementById("suggested-questions");
+    if (sqEl) {
+      const stride = (doy % (qPool.length - 1)) + 1;
+      const start  = doy % qPool.length;
+      const three  = [0, 1, 2].map((i) => qPool[((start + i * stride) % qPool.length + qPool.length) % qPool.length]);
+      sqEl.innerHTML = three.map((q) => `
+        <button class="chip" data-sq="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join("");
+      sqEl.querySelectorAll("[data-sq]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const input = document.getElementById("app-search-input");
+          if (input) { input.value = btn.dataset.sq; input.dispatchEvent(new Event("input")); }
+        });
+      });
+    }
+  }
+
+  function showFollowUpChips(container) {
+    const FOLLOWUPS = [
+      "Tell me more",
+      "When should I see a doctor?",
+      "Is there a more natural option?"
+    ];
+    const wrapper = container.querySelector("#followup-chips") ||
+                    document.getElementById("followup-chips");
+    if (!wrapper) return;
+    wrapper.hidden = false;
+    const chipRow = wrapper.querySelector(".chip-row");
+    if (!chipRow) return;
+    chipRow.innerHTML = FOLLOWUPS.map((f) => `
+      <button class="chip" data-fq="${escapeHtml(f)}">${escapeHtml(f)}</button>`).join("");
+    chipRow.querySelectorAll("[data-fq]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById("app-search-input");
+        if (input) { input.value = btn.dataset.fq; input.dispatchEvent(new Event("input")); }
+        wrapper.hidden = true;
+      });
+    });
+  }
+
+  function showSyncToast() {
+    const toast = document.getElementById("sync-toast");
+    if (!toast) return;
+    toast.hidden = false;
+    setTimeout(() => { toast.hidden = true; }, 3000);
+  }
+
+  /* ---------------------------------------------------
      16. INITIAL RENDER
      --------------------------------------------------- */
   function renderAll() {
@@ -1449,6 +1701,7 @@
     renderCare();
     renderLogs();
     renderChips();
+    renderCompanionExtras();
     renderHub("app-search-input", "app-list-stage", "app-results-count", "app-empty", "app-trusted-search", "h2");
     const savedTab = (() => { try { return sessionStorage.getItem("nurture_active_tab"); } catch(e) { return null; } })();
     openPanel(savedTab || "home");

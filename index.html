@@ -377,16 +377,41 @@
 
         <!-- HOME -->
         <section class="app-panel is-active" id="panel-home" data-panel="home">
-          <header class="panel-header">
-            <h1 id="home-greeting">Good morning 🌿</h1>
-            <span id="app-stage-label" class="stage-badge"></span>
+          <!-- Sync toast -->
+          <div id="sync-toast" class="sync-toast" hidden>☁ Updated from your phone</div>
+
+          <!-- Evening wind-down banner -->
+          <div id="wind-down-banner" class="wind-down-banner" hidden>
+            <span>🌙 Still time to check in with yourself today.</span>
+            <button id="wind-down-dismiss" class="icon-btn" aria-label="Dismiss">✕</button>
+          </div>
+
+          <header class="panel-header panel-header--home">
+            <div>
+              <h1 id="home-greeting">Good morning 🌿</h1>
+              <span id="app-stage-label" class="stage-badge"></span>
+            </div>
+            <div id="streak-chip" class="streak-chip" hidden>🌿 <span id="streak-count">0</span></div>
           </header>
 
-          <!-- Mood check-in -->
-          <div class="card">
-            <h2>How are you feeling right now?</h2>
-            <p class="muted-text">Tap once — this feeds your Pulse trends.</p>
+          <!-- Today's Moment card (expanded mood check-in) -->
+          <div class="card card--moment" id="today-moment-card">
+            <h2 class="moment-prompt">How are you feeling in this moment?</h2>
             <div class="mood-row" id="mood-row"></div>
+            <div id="moment-expanded" class="moment-expanded" hidden>
+              <label class="moment-label">Energy level</label>
+              <div class="energy-row" id="energy-row">
+                <span class="energy-label">Drained</span>
+                <input type="range" id="energy-slider" min="1" max="5" value="3" />
+                <span class="energy-label">Strong</span>
+              </div>
+              <div id="stage-quick-field" class="stage-quick-field"></div>
+              <button class="btn btn--primary btn--full" id="save-moment-btn">Save today's moment</button>
+            </div>
+            <div id="moment-summary" class="moment-summary" hidden>
+              <p id="moment-summary-text" class="moment-summary__text"></p>
+              <button class="btn btn--ghost btn--small" id="update-moment-btn">Update</button>
+            </div>
           </div>
 
           <!-- Ask anything -->
@@ -399,8 +424,8 @@
             </form>
           </div>
 
-          <!-- Checklist -->
-          <div class="card">
+          <!-- Checklist — hidden until mood logged -->
+          <div class="card" id="checklist-card" hidden>
             <div class="card__header-row">
               <h2>Today's Checklist</h2>
               <button class="icon-btn" id="add-checklist-btn" aria-label="Add item">+</button>
@@ -455,6 +480,18 @@
             <p>Questions answered for your stage of the journey.</p>
           </header>
 
+          <!-- Daily tip -->
+          <div class="card card--tip" id="daily-tip-card">
+            <p class="tip-label">Today's gentle tip</p>
+            <p id="daily-tip-text" class="tip-text"></p>
+          </div>
+
+          <!-- Rotating suggested questions -->
+          <div class="card">
+            <p class="tip-label">Today's suggestions</p>
+            <div class="chip-row chip-row--col" id="suggested-questions"></div>
+          </div>
+
           <div class="card">
             <div class="hub__search">
               <label for="app-search-input" class="sr-only">Search questions</label>
@@ -472,6 +509,10 @@
           <div id="app-trusted-search" class="trusted-search" hidden>
             <button type="button" id="app-trusted-search-btn" class="btn btn--ghost">Search trusted sources for this</button>
             <div class="trusted-results" aria-live="polite"></div>
+            <div id="followup-chips" class="followup-chips" hidden>
+              <p class="tip-label">Continue the conversation:</p>
+              <div class="chip-row chip-row--col"></div>
+            </div>
           </div>
         </section>
 
