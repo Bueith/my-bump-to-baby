@@ -356,8 +356,8 @@
         <button class="app-nav__item" data-tab="companion">
           <span class="app-nav__icon" aria-hidden="true">💬</span><span>Companion</span>
         </button>
-        <button class="app-nav__item" data-tab="village">
-          <span class="app-nav__icon" aria-hidden="true">🤝</span><span>Village</span>
+        <button class="app-nav__item" data-tab="circle">
+          <span class="app-nav__icon" aria-hidden="true">🤝</span><span>Circle</span>
         </button>
         <button class="app-nav__item" data-tab="care">
           <span class="app-nav__icon" aria-hidden="true">🩺</span><span>Care</span>
@@ -476,26 +476,17 @@
         </section>
 
         <!-- VILLAGE -->
-        <section class="app-panel" id="panel-village" data-panel="village">
+        <section class="app-panel" id="panel-circle" data-panel="circle">
           <header class="panel-header">
-            <h1>Your Village</h1>
-            <p>The people helping you, and what's left to do.</p>
+            <h1>My Circle</h1>
+            <p>The people you'd reach out to — for help, for company, or for a hard moment.</p>
           </header>
-
           <div class="card">
             <div class="card__header-row">
-              <h2>Support Network</h2>
-              <button class="icon-btn" id="add-member-btn" aria-label="Add a village member">+</button>
+              <h2>Your circle</h2>
+              <button class="icon-btn" id="add-circle-btn" aria-label="Add to your circle">+</button>
             </div>
-            <ul class="plain-list" id="village-members"></ul>
-          </div>
-
-          <div class="card">
-            <div class="card__header-row">
-              <h2>Shared Tasks</h2>
-              <button class="icon-btn" id="add-task-btn" aria-label="Add a shared task">+</button>
-            </div>
-            <ul class="task-list" id="village-tasks"></ul>
+            <ul class="plain-list" id="circle-list"></ul>
           </div>
         </section>
 
@@ -507,14 +498,6 @@
           </header>
 
           <div class="care-grid">
-            <div class="card card--accent-rose">
-              <div class="card__header-row">
-                <h2>Speed Dial</h2>
-                <button class="icon-btn" id="add-contact-btn" aria-label="Add contact">+</button>
-              </div>
-              <ul class="plain-list" id="care-contacts"></ul>
-            </div>
-
             <div class="card">
               <div class="card__header-row">
                 <h2>Appointments</h2>

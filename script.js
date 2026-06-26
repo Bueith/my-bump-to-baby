@@ -185,9 +185,8 @@
         pain: null
       },
       history: [],
-      village: { members: [], tasks: [] },
+      circle: [],
       care: {
-        contacts: [{ id: "c1", name: "Emergency Services", role: "Emergency", phone: "112" }],
         appointments: [],
         diary: []
       }
@@ -207,13 +206,9 @@
       return {
         ...fresh,
         ...saved,
-        today:   { ...fresh.today,   ...(saved.today   || {}) },
-        village: {
-          members: saved.village?.members || fresh.village.members,
-          tasks:   saved.village?.tasks   || fresh.village.tasks
-        },
+        today:  { ...fresh.today, ...(saved.today || {}) },
+        circle: saved.circle || fresh.circle,
         care: {
-          contacts:     saved.care?.contacts     || fresh.care.contacts,
           appointments: saved.care?.appointments || fresh.care.appointments,
           diary:        saved.care?.diary        || fresh.care.diary
         }
@@ -297,12 +292,8 @@
       const result = await response.json();
       if (response.ok && result.success && result.userData) {
         const cloud = result.userData;
-        state.village = {
-          members: cloud.village?.members ?? state.village?.members ?? [],
-          tasks:   cloud.village?.tasks   ?? state.village?.tasks   ?? []
-        };
+        state.circle = cloud.circle ?? state.circle ?? [];
         state.care = {
-          contacts:     cloud.care?.contacts     ?? state.care?.contacts     ?? [],
           appointments: cloud.care?.appointments ?? state.care?.appointments ?? [],
           diary:        cloud.care?.diary        ?? state.care?.diary        ?? []
         };
@@ -501,13 +492,9 @@
         ...fresh,
         ...localBase,
         ...cloud,
-        today:   { ...fresh.today,   ...(localBase.today   || {}), ...(cloud.today   || {}) },
-        village: {
-          members: cloud.village?.members ?? fresh.village.members,
-          tasks:   cloud.village?.tasks   ?? fresh.village.tasks
-        },
+        today:  { ...fresh.today, ...(localBase.today || {}), ...(cloud.today || {}) },
+        circle: cloud.circle ?? fresh.circle,
         care: {
-          contacts:     cloud.care?.contacts     ?? fresh.care.contacts,
           appointments: cloud.care?.appointments ?? fresh.care.appointments,
           diary:        cloud.care?.diary        ?? fresh.care.diary
         },
@@ -1131,33 +1118,73 @@
   /* ---------------------------------------------------
      12. VILLAGE TAB
      --------------------------------------------------- */
-  function renderVillage() {
-    const memberList = document.getElementById("village-members");
-    memberList.innerHTML = state.village.members.map((m) => `
-      <li data-id="${m.id}">
-        <span><span class="item-title">${escapeHtml(m.name)}</span><span class="item-sub"> · ${escapeHtml(m.role)}</span></span>
-        <button class="item-remove" data-remove-member="${m.id}">✕</button>
-      </li>`).join("") || `<li><span class="item-sub">No one added yet.</span></li>`;
+  function renderCircle() {
+    const list = document.getElementById("circle-list");
+    if (!list) return;
+    if (!state.circle || state.circle.length === 0) {
+      list.innerHTML = "<li style='padding:12px 0;color:#888'>No one added yet. Tap + to add your partner, mum, or a close friend.</li>";
+      return;
+    }
+    list.innerHTML = state.circle.map((c) => {
+      const last4   = c.phone ? "••• " + c.phone.slice(-4) : "";
+      const subtitle = [c.note, last4].filter(Boolean).join("  ·  ");
+      const badge    = c.availableInPanic
+        ? `<span style="font-size:0.68rem;background:#2E5D3F;color:#fff;border-radius:99px;padding:2px 8px;margin-left:auto">Panic ✓</span>` : "";
+      const phoneClean = c.phone ? c.phone.replace(/[^\d+]/g, "") : "";
+      const actions  = c.phone ? `
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <a class="btn btn--small" href="tel:${escapeHtml(c.phone)}">📞 Call</a>
+          <a class="btn btn--small" href="sms:${escapeHtml(c.phone)}">✉ SMS</a>
+          <a class="btn btn--small" href="https://wa.me/${escapeHtml(phoneClean)}" target="_blank" rel="noopener">WhatsApp</a>
+        </div>` : `<p style="font-size:0.8rem;color:#c0392b;margin-top:4px">Add a phone number to enable one-tap contact.</p>`;
+      return `
+        <li data-id="${c.id}" style="display:flex;flex-direction:column;padding:12px 0;border-bottom:1px solid rgba(0,0,0,0.06)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-weight:600">${escapeHtml(c.name)}</span>
+            ${badge}
+            <button class="item-remove" data-edit-circle="${c.id}" title="Edit" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:1rem">✏</button>
+            <button class="item-remove" data-remove-circle="${c.id}" title="Remove">✕</button>
+          </div>
+          ${subtitle ? `<span style="font-size:0.82rem;color:#888;margin-top:2px">${escapeHtml(subtitle)}</span>` : ""}
+          ${actions}
+        </li>`;
+    }).join("");
 
-    const taskList = document.getElementById("village-tasks");
-    taskList.innerHTML = state.village.tasks.map((t) => `
-      <li data-id="${t.id}">
-        <input type="checkbox" data-toggle-task="${t.id}" ${t.done ? "checked" : ""} />
-        <span class="task-text ${t.done ? "is-done" : ""}">
-          ${escapeHtml(t.label)}
-          <span class="task-assignee">${escapeHtml(t.assignee)}</span>
-        </span>
-        <button class="item-remove" data-remove-task="${t.id}">✕</button>
-      </li>`).join("") || `<li><span class="item-sub">No shared tasks yet.</span></li>`;
-
-    memberList.querySelectorAll("[data-remove-member]").forEach((btn) => {
-      btn.onclick = () => { state.village.members = state.village.members.filter((m) => m.id !== btn.dataset.removeMember); saveState(); renderVillage(); };
+    list.querySelectorAll("[data-remove-circle]").forEach((btn) => {
+      btn.onclick = () => {
+        state.circle = state.circle.filter((c) => c.id !== btn.dataset.removeCircle);
+        saveState(); renderCircle();
+      };
     });
-    taskList.querySelectorAll("[data-toggle-task]").forEach((box) => {
-      box.onchange = () => { const t = state.village.tasks.find((t) => t.id === box.dataset.toggleTask); if (t) { t.done = box.checked; saveState(); renderVillage(); } };
-    });
-    taskList.querySelectorAll("[data-remove-task]").forEach((btn) => {
-      btn.onclick = () => { state.village.tasks = state.village.tasks.filter((t) => t.id !== btn.dataset.removeTask); saveState(); renderVillage(); };
+    list.querySelectorAll("[data-edit-circle]").forEach((btn) => {
+      btn.onclick = () => {
+        const c = state.circle.find((x) => x.id === btn.dataset.editCircle);
+        if (!c) return;
+        openModal("Edit contact", `
+          <label>Name</label>
+          <input type="text" name="name" required value="${escapeHtml(c.name)}" />
+          <label>Phone number</label>
+          <input type="tel" name="phone" value="${escapeHtml(c.phone || "")}" />
+          <label>Relationship (optional)</label>
+          <input type="text" name="note" value="${escapeHtml(c.note || "")}" placeholder="e.g. My mum" />
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
+            <input type="checkbox" name="availableInPanic" ${c.availableInPanic ? "checked" : ""} />
+            <span>Available in Panic Mode</span>
+          </label>`,
+          (data) => {
+            const idx = state.circle.findIndex((x) => x.id === c.id);
+            if (idx !== -1) {
+              state.circle[idx] = { ...c,
+                name:             data.get("name"),
+                phone:            data.get("phone") || "",
+                note:             data.get("note")  || "",
+                availableInPanic: data.get("availableInPanic") === "on"
+              };
+            }
+            saveState(); renderCircle();
+          }
+        );
+      };
     });
   }
 
@@ -1165,16 +1192,6 @@
      13. CARE TAB
      --------------------------------------------------- */
   function renderCare() {
-    const contactList = document.getElementById("care-contacts");
-    contactList.innerHTML = state.care.contacts.map((c) => `
-      <li data-id="${c.id}">
-        <span><span class="item-title">${escapeHtml(c.name)}</span><span class="item-sub"> · ${escapeHtml(c.role)} · ${escapeHtml(c.phone)}</span></span>
-        <span>
-          <a class="icon-btn" style="text-decoration:none;font-size:1rem;" href="tel:${escapeHtml(c.phone)}" aria-label="Call ${escapeHtml(c.name)}">📞</a>
-          <button class="item-remove" data-remove-contact="${c.id}">✕</button>
-        </span>
-      </li>`).join("") || `<li><span class="item-sub">No contacts yet.</span></li>`;
-
     const apptList = document.getElementById("care-appointments");
     apptList.innerHTML = state.care.appointments.map((a) => `
       <li data-id="${a.id}">
@@ -1189,9 +1206,6 @@
         <button class="item-remove" data-remove-diary="${d.id}">✕</button>
       </li>`).join("") || `<li><span class="item-sub">No entries yet — tap + to write one.</span></li>`;
 
-    contactList.querySelectorAll("[data-remove-contact]").forEach((btn) => {
-      btn.onclick = () => { state.care.contacts = state.care.contacts.filter((c) => c.id !== btn.dataset.removeContact); saveState(); renderCare(); };
-    });
     apptList.querySelectorAll("[data-remove-appt]").forEach((btn) => {
       btn.onclick = () => { state.care.appointments = state.care.appointments.filter((a) => a.id !== btn.dataset.removeAppt); saveState(); renderCare(); };
     });
@@ -1374,33 +1388,30 @@
   function closeModal() { overlay.hidden = true; modalForm.innerHTML = ""; }
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
 
-  document.getElementById("add-member-btn").addEventListener("click", () => {
-    openModal("Add to your village", `
-      <label for="f-name">Name</label>
-      <input type="text" id="f-name" name="name" required />
-      <label for="f-role">Role</label>
-      <select id="f-role" name="role"><option>Partner</option><option>Family</option><option>Friend</option></select>`,
-      (data) => { state.village.members.push({ id: "m" + Date.now(), name: data.get("name"), role: data.get("role") }); saveState(); renderVillage(); }
-    );
-  });
-
-  document.getElementById("add-task-btn").addEventListener("click", () => {
-    const options = state.village.members.map((m) => `<option>${escapeHtml(m.name)}</option>`).join("");
-    openModal("New shared task", `
-      <label for="f-label">Task</label>
-      <input type="text" id="f-label" name="label" required placeholder="e.g. Pick up prescription" />
-      <label for="f-assignee">Assign to</label>
-      <select id="f-assignee" name="assignee">${options || '<option>Unassigned</option>'}</select>`,
-      (data) => { state.village.tasks.push({ id: "t" + Date.now(), label: data.get("label"), assignee: data.get("assignee"), done: false }); saveState(); renderVillage(); }
-    );
-  });
-
-  document.getElementById("add-contact-btn").addEventListener("click", () => {
-    openModal("Add speed dial contact", `
-      <label for="f-cname">Name</label><input type="text" id="f-cname" name="name" required />
-      <label for="f-crole">Role</label><input type="text" id="f-crole" name="role" placeholder="e.g. Midwife, GP" />
-      <label for="f-cphone">Phone number</label><input type="tel" id="f-cphone" name="phone" required />`,
-      (data) => { state.care.contacts.push({ id: "c" + Date.now(), name: data.get("name"), role: data.get("role") || "Contact", phone: data.get("phone") }); saveState(); renderCare(); }
+  document.getElementById("add-circle-btn").addEventListener("click", () => {
+    const defaultPanic = !state.circle || state.circle.length < 3;
+    openModal("Add to your circle", `
+      <label>Name</label>
+      <input type="text" name="name" required placeholder="e.g. Sarah" />
+      <label>Phone number</label>
+      <input type="tel" name="phone" required placeholder="e.g. +27 82 555 1234" />
+      <label>Relationship (optional)</label>
+      <input type="text" name="note" placeholder="e.g. My mum, Partner, Best friend" />
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
+        <input type="checkbox" name="availableInPanic" ${defaultPanic ? "checked" : ""} />
+        <span>Available in Panic Mode</span>
+      </label>`,
+      (data) => {
+        state.circle = state.circle || [];
+        state.circle.push({
+          id:               "cr" + Date.now(),
+          name:             data.get("name"),
+          phone:            data.get("phone") || "",
+          note:             data.get("note")  || "",
+          availableInPanic: data.get("availableInPanic") === "on"
+        });
+        saveState(); renderCircle();
+      }
     );
   });
 
@@ -1434,7 +1445,7 @@
   function renderAll() {
     renderHome();
     renderPulse();
-    renderVillage();
+    renderCircle();
     renderCare();
     renderLogs();
     renderChips();
