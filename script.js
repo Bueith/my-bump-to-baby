@@ -189,6 +189,7 @@
       history: [],
       todayMomentSaved: false,
       circle: [],
+      pregnancyWeek: 1,
       care: {
         appointments: [],
         diary: []
@@ -305,6 +306,11 @@
         };
         if (cloud.name)  state.name  = cloud.name;
         if (cloud.stage) state.stage = cloud.stage;
+        // Internal only — not shown anywhere on web. Used solely to
+        // gate the "Has your baby arrived?" card the same way the app
+        // does (week 38+). The app is the source of truth for this
+        // number; web just reads whatever was last synced.
+        if (typeof cloud.pregnancyWeek === "number") state.pregnancyWeek = cloud.pregnancyWeek;
         saveState();
         renderAll();
         showSyncToast();
@@ -893,7 +899,10 @@
     });
 
     const transitionCard = document.getElementById("baby-arrived-card");
-    if (transitionCard) transitionCard.hidden = state.stage !== "pregnant";
+    if (transitionCard) {
+      const week = state.pregnancyWeek || 1;
+      transitionCard.hidden = !(state.stage === "pregnant" && week >= 38);
+    }
   }
 
   // ── Streak computation ──────────────────────────────────────

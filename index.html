@@ -362,9 +362,10 @@
         <button class="app-nav__item" data-tab="care">
           <span class="app-nav__icon" aria-hidden="true">🩺</span><span>Care</span>
         </button>
-        <button class="app-nav__item" data-tab="logs">
-          <span class="app-nav__icon" aria-hidden="true">🗓️</span><span>Logs</span>
-        </button>
+        <!-- Logs nav button removed — matches the app, which now
+             reaches Logs only via a Home card. Web has no equivalent
+             card, so the Logs panel is currently unreachable from the
+             UI here (data is preserved, just no nav entry point). -->
         <a href="#" id="app-exit" class="app-nav__exit">
           <span aria-hidden="true">←</span><span>Back to site</span>
         </a>
