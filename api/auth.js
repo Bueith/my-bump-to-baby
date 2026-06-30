@@ -207,6 +207,77 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, userData, token: sessionToken });
     }
 
+    if (action === "claim") {
+      // Re-assigns Firestore ownership of an existing account to a NEW
+      // device. Needed because the Android app uses Firebase Anonymous
+      // Auth — each fresh install gets a brand-new anonymous UID, and
+      // Firestore security rules require request.auth.uid to match the
+      // document's stored ownerUid. A reinstalled app literally cannot
+      // read or write its old data via the client SDK until ownerUid
+      // is updated to match the new device — and the client SDK itself
+      // can't make that update (the very rule that protects the data
+      // also blocks the client from reassigning it). This runs through
+      // the Admin SDK instead, which bypasses client security rules
+      // entirely, after the same password check as "verify" above.
+      //
+      // Request body: { action: "claim", code, password, newOwnerUid }
+      const { newOwnerUid } = req.body || {};
+      if (typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters." });
+      }
+      if (typeof newOwnerUid !== "string" || newOwnerUid.length < 10) {
+        return res.status(400).json({ error: "Missing or invalid device identity." });
+      }
+
+      const snap = await userRef.get();
+      if (!snap.exists) {
+        return res.status(404).json({ error: "That access code wasn't found." });
+      }
+      const data = snap.data();
+      if (!data.passwordHash) {
+        return res.status(400).json({ error: "This account hasn't set a web password yet." });
+      }
+
+      // Same rate-limit gate as verify — claiming is still a password
+      // check, and should be just as resistant to brute-forcing.
+      const now = Date.now();
+      const attemptsCount = data.rl_attempts || 0;
+      const windowStart   = data.rl_window_start || 0;
+      const windowAge     = now - windowStart;
+      let effectiveCount  = attemptsCount;
+      let effectiveStart  = windowStart;
+      if (windowAge > RATE_LIMIT_WINDOW_MS) {
+        effectiveCount = 0;
+        effectiveStart = now;
+      }
+      if (effectiveCount >= RATE_LIMIT_MAX_ATTEMPTS) {
+        const minutesLeft = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - effectiveStart)) / 60000);
+        return res.status(429).json({
+          error: `Too many attempts. Please try again in about ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}.`
+        });
+      }
+
+      const valid = await verifyPassword(password, data.passwordHash);
+      if (!valid) {
+        await userRef.set({
+          rl_attempts: effectiveCount + 1,
+          rl_window_start: effectiveStart
+        }, { merge: true });
+        return res.status(401).json({ error: "Incorrect password." });
+      }
+
+      // Password confirmed — reassign ownership to the new device and
+      // reset the rate-limit counter, same as a successful verify.
+      await userRef.set({
+        ownerUid: newOwnerUid,
+        rl_attempts: 0,
+        rl_window_start: 0
+      }, { merge: true });
+
+      const { passwordHash, rl_attempts, rl_window_start, ...userData } = data;
+      return res.status(200).json({ success: true, userData });
+    }
+
     if (action === "save") {
       // The ONLY write path for the website. The client never writes
       // to Firestore directly — the client SDK has no way to prove a
