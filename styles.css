@@ -1603,3 +1603,12 @@ img { max-width: 100%; display: block; }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ── Brand mark (header logo) ──────────────────────────────── */
+.brand__mark {
+  height: 32px;
+  width: auto;
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
+}
