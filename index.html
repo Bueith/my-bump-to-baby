@@ -24,7 +24,6 @@
           <span class="brand__name">Nurture</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
-          <a href="#hub">Common Questions</a>
           <a href="#features">What's Inside</a>
           <a href="#" id="nav-register">Register</a>
           <a href="#" id="nav-login">Login</a>
@@ -91,36 +90,43 @@
         </div>
       </section>
 
-      <!-- QUESTION HUB -->
-      <section class="hub" id="hub" aria-labelledby="hub-heading">
-        <div class="wrap">
-          <p class="eyebrow">The 18 questions every mother asks</p>
-          <h2 id="hub-heading">Search the questions you've been carrying alone</h2>
-          <p class="hub__sub">Real worries from pregnancy and the fourth trimester, answered in plain language.</p>
+      <!-- COMPANION DEMO -->
+      <section class="companion-demo" id="hub" aria-labelledby="demo-heading">
+        <div class="wrap companion-demo__inner">
+          <p class="eyebrow">Try it right now</p>
+          <h2 id="demo-heading">Ask anything</h2>
+          <p class="companion-demo__sub">Type a real pregnancy or postpartum question and see how Nurture finds calm, trusted answers.</p>
 
-          <div class="hub__search">
-            <label for="hub-search-input" class="sr-only">Search questions</label>
-            <input type="text" id="hub-search-input" placeholder="Search: e.g. crying, exhausted, bonding&hellip;" autocomplete="off" />
+          <div class="companion-demo__search-wrap">
+            <div class="companion-demo__input-row">
+              <label for="demo-search-input" class="sr-only">Ask a question</label>
+              <input
+                type="text"
+                id="demo-search-input"
+                class="companion-demo__input"
+                placeholder="e.g. Is cramping at 8 weeks normal?"
+                autocomplete="off"
+              />
+              <button class="btn btn--primary companion-demo__btn" id="demo-search-btn">Ask</button>
+            </div>
+            <div class="companion-demo__chips" id="demo-chips">
+              <button class="demo-chip" data-q="nausea at 8 weeks">nausea at 8 weeks</button>
+              <button class="demo-chip" data-q="baby not moving much">baby not moving much</button>
+              <button class="demo-chip" data-q="feeling overwhelmed after birth">feeling overwhelmed after birth</button>
+              <button class="demo-chip" data-q="is this normal cramping">is this normal cramping</button>
+              <button class="demo-chip" data-q="postpartum anxiety help">postpartum anxiety help</button>
+            </div>
           </div>
 
-          <div id="hub-results-count" class="hub__count" aria-live="polite"></div>
+          <p class="companion-demo__counter" id="demo-counter">3 free searches remaining</p>
 
-          <h3 class="hub__group-label">During Pregnancy</h3>
-          <div id="hub-list-pregnancy" class="hub__list"></div>
+          <div id="demo-results" class="companion-demo__results" aria-live="polite"></div>
 
-          <h3 class="hub__group-label">After Birth</h3>
-          <div id="hub-list-postpartum" class="hub__list"></div>
-
-          <p id="hub-empty" class="hub__empty" hidden>No questions match — try a different word.</p>
-
-          <div id="hub-trusted-search" class="trusted-search" hidden>
-            <button type="button" id="hub-trusted-search-btn" class="btn btn--ghost">Search trusted medical sources for this</button>
-            <div id="hub-trusted-results" class="trusted-results" aria-live="polite"></div>
+          <div class="companion-demo__limit-msg" id="demo-limit-msg" hidden>
+            <p>You've used your 3 free searches.</p>
+            <p class="companion-demo__limit-cta">Download the free app for unlimited calm answers anytime.</p>
+            <a href="#download" class="btn btn--primary">Get Nurture — it's free</a>
           </div>
-
-          <blockquote class="hub__hook">
-            <p>&ldquo;Is my baby okay? Am I okay? Am I doing this right?&rdquo; Nurture is built to echo those truths back to you, with zero tracking noise.</p>
-          </blockquote>
         </div>
       </section>
 
@@ -160,7 +166,6 @@
       <div class="wrap site-footer__inner">
         <p>&copy; 2026 Nurture. Your data stays on your device. We built it that way on purpose.</p>
         <nav aria-label="Footer">
-          <a href="#hub">Common Questions</a>
           <a href="#features">What's Inside</a>
         </nav>
       </div>

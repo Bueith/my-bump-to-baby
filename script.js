@@ -1096,37 +1096,128 @@
   }
 
   // Marketing page hub — shows both stages
-  function renderMarketingHub(query) {
-    const pregCount  = renderQuestionGroup("hub-list-pregnancy", "pregnant", query, "h3");
-    const postCount  = renderQuestionGroup("hub-list-postpartum", "postpartum", query, "h3");
-    const total      = pregCount + postCount;
-    const countEl    = document.getElementById("hub-results-count");
-    const emptyEl    = document.getElementById("hub-empty");
-    if (countEl) countEl.textContent = query ? `${total} question${total === 1 ? "" : "s"} match "${query}"` : "";
-    if (emptyEl) emptyEl.hidden = total !== 0;
+  wireAccordion("app-list-stage");
 
-    const trustedPanel = document.getElementById("hub-trusted-search");
-    if (trustedPanel) {
-      const show = !!query && total === 0;
-      trustedPanel.hidden = !show;
-      if (show) {
-        trustedPanel.dataset.pendingQuery = query;
-        const resultsEl = trustedPanel.querySelector(".trusted-results");
-        if (resultsEl) resultsEl.innerHTML = "";
-        const btn = trustedPanel.querySelector("button");
-        if (btn) btn.textContent = `Search trusted sources for "${query}"`;
+  /* ---------------------------------------------------
+     COMPANION DEMO — landing page interactive search
+     3 free searches, limit persisted in localStorage.
+     --------------------------------------------------- */
+  const DEMO_STORAGE_KEY = "nurture_demo_remaining";
+  const DEMO_MAX         = 3;
+
+  function demoRemaining() {
+    const stored = parseInt(localStorage.getItem(DEMO_STORAGE_KEY), 10);
+    return isNaN(stored) ? DEMO_MAX : Math.max(0, stored);
+  }
+
+  function setDemoRemaining(n) {
+    localStorage.setItem(DEMO_STORAGE_KEY, Math.max(0, n));
+  }
+
+  function updateDemoUI(remaining) {
+    const counter  = document.getElementById("demo-counter");
+    const input    = document.getElementById("demo-search-input");
+    const btn      = document.getElementById("demo-search-btn");
+    const chips    = document.getElementById("demo-chips");
+    const limitMsg = document.getElementById("demo-limit-msg");
+
+    if (remaining <= 0) {
+      if (counter)  counter.hidden = true;
+      if (input)    { input.disabled = true; input.placeholder = "No searches remaining"; }
+      if (btn)      btn.disabled = true;
+      if (chips)    chips.style.opacity = "0.35";
+      if (limitMsg) limitMsg.hidden = false;
+    } else {
+      if (counter) {
+        counter.hidden = false;
+        counter.textContent = `${remaining} free search${remaining === 1 ? "" : "es"} remaining`;
       }
+      if (limitMsg) limitMsg.hidden = true;
     }
   }
 
-  wireAccordion("hub-list-pregnancy");
-  wireAccordion("hub-list-postpartum");
-  wireAccordion("app-list-stage");
+  async function runDemoSearch(query) {
+    const remaining = demoRemaining();
+    if (remaining <= 0 || !query.trim()) return;
 
-  document.getElementById("hub-search-input")?.addEventListener("input", (e) => {
-    renderMarketingHub(e.target.value.trim());
-  });
-  renderMarketingHub("");
+    const resultsEl = document.getElementById("demo-results");
+    if (!resultsEl) return;
+
+    // Decrement BEFORE the request so refreshing can't bypass the limit
+    const newRemaining = remaining - 1;
+    setDemoRemaining(newRemaining);
+    updateDemoUI(newRemaining);
+
+    resultsEl.innerHTML = `<p class="trusted-search__status">Searching trusted sources&hellip;</p>`;
+
+    try {
+      const resp = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+      if (!resp.ok) {
+        resultsEl.innerHTML = `<p class="trusted-card__error">Search unavailable — please try again.</p>`;
+        return;
+      }
+      const data = await resp.json();
+      if (data.error || !data.results || data.results.length === 0) {
+        resultsEl.innerHTML = `<p class="trusted-search__status">No trusted sources matched. Try a different question.</p>`;
+        return;
+      }
+
+      const best = data.best || data.results[0];
+      const rest = data.results.filter(r => r !== best).slice(0, 3);
+
+      const bestHtml = `
+        <div class="trusted-card trusted-card--best">
+          <span class="trusted-card__badge">Best answer</span>
+          <p class="trusted-card__source">${escapeHtml(best.source || "")}</p>
+          <p class="trusted-card__snippet">${escapeHtml(best.snippet || "")}</p>
+          <a class="trusted-card__link" href="${escapeHtml(best.link || "#")}" target="_blank" rel="noopener">
+            Read on ${escapeHtml(best.source || "source")} &rarr;
+          </a>
+        </div>`;
+
+      const restHtml = rest.map(r => `
+        <div class="trusted-card">
+          <p class="trusted-card__source">${escapeHtml(r.source || "")}</p>
+          <p class="trusted-card__snippet">${escapeHtml(r.snippet || "")}</p>
+          <a class="trusted-card__link" href="${escapeHtml(r.link || "#")}" target="_blank" rel="noopener">
+            Read on ${escapeHtml(r.source || "source")} &rarr;
+          </a>
+        </div>`).join("");
+
+      resultsEl.innerHTML = bestHtml + restHtml +
+        `<p class="trusted-search__disclosure">Results from trusted medical and pregnancy organisations. We never store or share what you search.</p>`;
+    } catch (err) {
+      resultsEl.innerHTML = `<p class="trusted-card__error">Something went wrong. Please try again.</p>`;
+    }
+  }
+
+  // Wire up demo inputs on the marketing page
+  const demoInput = document.getElementById("demo-search-input");
+  const demoBtn   = document.getElementById("demo-search-btn");
+
+  if (demoInput && demoBtn) {
+    // Restore UI state on page load/refresh
+    updateDemoUI(demoRemaining());
+
+    demoBtn.addEventListener("click", () => {
+      const q = demoInput.value.trim();
+      if (q) runDemoSearch(q);
+    });
+    demoInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const q = demoInput.value.trim();
+        if (q) runDemoSearch(q);
+      }
+    });
+
+    // Example chips
+    document.querySelectorAll(".demo-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        demoInput.value = chip.dataset.q;
+        runDemoSearch(chip.dataset.q);
+      });
+    });
+  }
 
   document.getElementById("app-search-input")?.addEventListener("input", () => {
     renderHub("app-search-input", "app-list-stage", "app-results-count", "app-empty", "app-trusted-search", "h2");
@@ -1242,7 +1333,6 @@
     }
   }
 
-  document.getElementById("hub-trusted-search-btn")?.addEventListener("click", () => runTrustedSearch("hub-trusted-search"));
   document.getElementById("app-trusted-search-btn")?.addEventListener("click", () => runTrustedSearch("app-trusted-search"));
 
   /* ---------------------------------------------------
