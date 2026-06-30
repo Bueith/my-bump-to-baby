@@ -1606,7 +1606,7 @@ img { max-width: 100%; display: block; }
 
 /* ── Brand mark (header logo) ──────────────────────────────── */
 .brand__mark {
-  height: 32px;
+  height: 64px;
   width: auto;
   display: inline-block;
   vertical-align: middle;
