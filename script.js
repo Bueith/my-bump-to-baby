@@ -1100,7 +1100,7 @@
 
   /* ---------------------------------------------------
      COMPANION DEMO — landing page interactive search
-     3 free searches, limit persisted in localStorage.
+     3 demo searches, limit persisted in localStorage.
      --------------------------------------------------- */
   // ── Search limit logic ───────────────────────────────────────
   // State stored in localStorage as one JSON object:
@@ -1210,7 +1210,7 @@
       if (counter) {
         counter.hidden = false;
         counter.textContent = remaining === INITIAL_MAX
-          ? `${remaining} free searches`
+          ? `${remaining} searches to try`
           : `${remaining} search${remaining === 1 ? "" : "es"} remaining`;
       }
       if (input)    { input.disabled = false; input.placeholder = "e.g. Is cramping at 8 weeks normal?"; }
