@@ -53,16 +53,6 @@
               Launch Web App ➔
             </a>
           </div>
-
-          <div class="ask-widget" role="search">
-            <p class="ask-widget__label">Is This Normal? — Ask anything</p>
-            <form id="hero-ask-form" class="ask-widget__form">
-              <label for="hero-ask-input" class="sr-only">Ask a question</label>
-              <input type="text" id="hero-ask-input" placeholder="e.g. Is cramping at week 4 normal?" autocomplete="off" />
-              <button type="submit">Ask</button>
-            </form>
-            <p class="ask-widget__hint">Try: nausea, exhausted, bonding, feeding, birth fear&hellip;</p>
-          </div>
         </div>
       </section>
 
@@ -123,8 +113,9 @@
           <div id="demo-results" class="companion-demo__results" aria-live="polite"></div>
 
           <div class="companion-demo__limit-msg" id="demo-limit-msg" hidden>
-            <p>You've used your 3 free searches.</p>
-            <p class="companion-demo__limit-cta">Download the free app for unlimited calm answers anytime.</p>
+            <p>You've reached the free trial limit.</p>
+            <p class="companion-demo__limit-cta" id="demo-limit-time">Come back in 24 hours for one more search.</p>
+            <p class="companion-demo__limit-sub">Or download the free app for unlimited calm answers anytime.</p>
             <a href="#download" class="btn btn--primary">Get Nurture — it's free</a>
           </div>
         </div>
@@ -423,7 +414,7 @@
           <!-- Ask anything -->
           <div class="card">
             <h2>Is This Normal? — Ask anything</h2>
-            <form id="home-ask-form" class="ask-widget__form">
+            <form id="home-ask-form" class="app-ask-form">
               <label for="home-ask-input" class="sr-only">Ask a question</label>
               <input type="text" id="home-ask-input" placeholder="Type what's worrying you&hellip;" autocomplete="off" />
               <button type="submit">Ask</button>

@@ -211,47 +211,6 @@ img { max-width: 100%; display: block; }
   margin: 28px 0 40px;
 }
 
-.ask-widget {
-  background: var(--cream-50);
-  border: 1px solid var(--stone-200);
-  border-radius: var(--radius-lg);
-  padding: 22px 24px;
-  max-width: 560px;
-  box-shadow: var(--shadow-soft);
-}
-
-.ask-widget__label { font-weight: 700; color: var(--sage-700); margin-bottom: 0.6em; }
-
-.ask-widget__form { display: flex; gap: 10px; }
-
-.ask-widget__form input[type="text"] {
-  flex: 1;
-  padding: 0.8em 1em;
-  border-radius: var(--radius-pill);
-  border: 1.5px solid var(--stone-200);
-  font-family: var(--font-body);
-  font-size: 1rem;
-  background: var(--stone-100);
-}
-.ask-widget__form input[type="text"]:focus {
-  outline: 2px solid var(--sage-500);
-  outline-offset: 1px;
-  background: var(--cream-50);
-}
-
-.ask-widget__form button {
-  background: var(--sage-700);
-  color: var(--cream-50);
-  border: none;
-  padding: 0 1.5em;
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  cursor: pointer;
-}
-.ask-widget__form button:hover { background: var(--sage-900); }
-
-.ask-widget__hint { font-size: 0.85rem; color: var(--stone-600); margin: 0.8em 0 0; }
-
 /* =====================================================
    FEATURES
    ===================================================== */
@@ -846,7 +805,6 @@ img { max-width: 100%; display: block; }
 
   .hero { padding: 56px 0 44px; }
   .hero__actions { flex-direction: column; align-items: stretch; }
-  .ask-widget__form { flex-direction: column; }
 
   .app-shell { flex-direction: column; }
 
@@ -1728,4 +1686,44 @@ img { max-width: 100%; display: block; }
   .companion-demo {
     padding: 52px 0 48px;
   }
+}
+
+.companion-demo__limit-sub {
+  font-size: 0.9rem;
+  color: var(--color-on-surface-variant, #555);
+  margin-bottom: 18px !important;
+  font-weight: 400 !important;
+}
+
+/* ── In-app companion ask form (inside the web app panel) ──── */
+.app-ask-form {
+  display: flex;
+  gap: 10px;
+}
+.app-ask-form input[type="text"] {
+  flex: 1;
+  padding: 0.8em 1em;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--stone-200);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  background: var(--stone-100);
+}
+.app-ask-form input[type="text"]:focus {
+  outline: 2px solid var(--sage-500);
+  outline-offset: 1px;
+  background: var(--cream-50);
+}
+.app-ask-form button {
+  background: var(--sage-700);
+  color: var(--cream-50);
+  border: none;
+  padding: 0 1.5em;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  cursor: pointer;
+}
+.app-ask-form button:hover { background: var(--sage-900); }
+@media (max-width: 600px) {
+  .app-ask-form { flex-direction: column; }
 }

@@ -1102,51 +1102,135 @@
      COMPANION DEMO — landing page interactive search
      3 free searches, limit persisted in localStorage.
      --------------------------------------------------- */
-  const DEMO_STORAGE_KEY = "nurture_demo_remaining";
-  const DEMO_MAX         = 3;
+  // ── Search limit logic ───────────────────────────────────────
+  // State stored in localStorage as one JSON object:
+  //   { count: <searches used in current window>,
+  //     windowStart: <timestamp ms when window opened>,
+  //     phase: "initial" | "cooldown" }
+  //
+  // Phase "initial": user gets 3 searches. When exhausted, a 24-hour
+  //   cooldown starts and phase shifts to "cooldown".
+  // Phase "cooldown": once 24 hours have elapsed, the user gets 1
+  //   search. When used, another 24-hour cooldown starts. This repeats
+  //   indefinitely — 1 search every 24 hours forever after the first
+  //   session. Completely transparent: the UI always shows exactly how
+  //   many hours/minutes remain before the next unlock.
+  const DEMO_KEY      = "nurture_demo_v2";
+  const INITIAL_MAX   = 3;
+  const COOLDOWN_REFILL = 1;          // searches per cooldown cycle
+  const COOLDOWN_MS   = 24 * 60 * 60 * 1000;
 
-  function demoRemaining() {
-    const stored = parseInt(localStorage.getItem(DEMO_STORAGE_KEY), 10);
-    return isNaN(stored) ? DEMO_MAX : Math.max(0, stored);
+  function loadDemoState() {
+    try {
+      const raw = localStorage.getItem(DEMO_KEY);
+      if (!raw) return { count: 0, windowStart: Date.now(), phase: "initial" };
+      return JSON.parse(raw);
+    } catch (e) {
+      return { count: 0, windowStart: Date.now(), phase: "initial" };
+    }
   }
 
-  function setDemoRemaining(n) {
-    localStorage.setItem(DEMO_STORAGE_KEY, Math.max(0, n));
+  function saveDemoState(s) {
+    try { localStorage.setItem(DEMO_KEY, JSON.stringify(s)); } catch (e) {}
   }
 
-  function updateDemoUI(remaining) {
+  // Returns { allowed: bool, remaining: number, hoursLeft: number|null }
+  // hoursLeft is null when searches are available.
+  function demoStatus() {
+    const s   = loadDemoState();
+    const now = Date.now();
+
+    if (s.phase === "initial") {
+      const used      = s.count || 0;
+      const remaining = Math.max(0, INITIAL_MAX - used);
+      if (remaining > 0) return { allowed: true, remaining, hoursLeft: null };
+      // Exhausted initial quota — check if cooldown has elapsed
+      const elapsed = now - (s.windowStart || now);
+      if (elapsed >= COOLDOWN_MS) {
+        // Cooldown over — shift to "cooldown" phase, reset window
+        const next = { count: 0, windowStart: now, phase: "cooldown" };
+        saveDemoState(next);
+        return { allowed: true, remaining: COOLDOWN_REFILL, hoursLeft: null };
+      }
+      const msLeft    = COOLDOWN_MS - elapsed;
+      const hoursLeft = msLeft / (1000 * 60 * 60);
+      return { allowed: false, remaining: 0, hoursLeft };
+    }
+
+    // phase === "cooldown": 1 search per 24-hour window
+    const used      = s.count || 0;
+    const remaining = Math.max(0, COOLDOWN_REFILL - used);
+    if (remaining > 0) return { allowed: true, remaining, hoursLeft: null };
+    // Used up the cooldown search — check if next window started
+    const elapsed = now - (s.windowStart || now);
+    if (elapsed >= COOLDOWN_MS) {
+      const next = { count: 0, windowStart: now, phase: "cooldown" };
+      saveDemoState(next);
+      return { allowed: true, remaining: COOLDOWN_REFILL, hoursLeft: null };
+    }
+    const msLeft    = COOLDOWN_MS - elapsed;
+    const hoursLeft = msLeft / (1000 * 60 * 60);
+    return { allowed: false, remaining: 0, hoursLeft };
+  }
+
+  function recordDemoSearch() {
+    const s = loadDemoState();
+    s.count = (s.count || 0) + 1;
+    // Stamp windowStart only when the first search in a window is used
+    if (s.count === 1) s.windowStart = Date.now();
+    saveDemoState(s);
+  }
+
+  function formatHoursLeft(h) {
+    if (h >= 2) return `${Math.ceil(h)} hours`;
+    if (h >= 1) return "about 1 hour";
+    const mins = Math.ceil(h * 60);
+    return `${mins} minute${mins === 1 ? "" : "s"}`;
+  }
+
+  function updateDemoUI() {
+    const { allowed, remaining, hoursLeft } = demoStatus();
     const counter  = document.getElementById("demo-counter");
     const input    = document.getElementById("demo-search-input");
     const btn      = document.getElementById("demo-search-btn");
     const chips    = document.getElementById("demo-chips");
     const limitMsg = document.getElementById("demo-limit-msg");
+    const limitTime = document.getElementById("demo-limit-time");
 
-    if (remaining <= 0) {
+    if (!allowed) {
       if (counter)  counter.hidden = true;
-      if (input)    { input.disabled = true; input.placeholder = "No searches remaining"; }
+      if (input)    { input.disabled = true; input.placeholder = "Search locked for now"; }
       if (btn)      btn.disabled = true;
       if (chips)    chips.style.opacity = "0.35";
       if (limitMsg) limitMsg.hidden = false;
+      if (limitTime && hoursLeft !== null) {
+        limitTime.textContent = `Try again in ${formatHoursLeft(hoursLeft)}.`;
+      }
     } else {
       if (counter) {
         counter.hidden = false;
-        counter.textContent = `${remaining} free search${remaining === 1 ? "" : "es"} remaining`;
+        counter.textContent = remaining === INITIAL_MAX
+          ? `${remaining} free searches`
+          : `${remaining} search${remaining === 1 ? "" : "es"} remaining`;
       }
+      if (input)    { input.disabled = false; input.placeholder = "e.g. Is cramping at 8 weeks normal?"; }
+      if (btn)      btn.disabled = false;
+      if (chips)    chips.style.opacity = "";
       if (limitMsg) limitMsg.hidden = true;
     }
   }
 
   async function runDemoSearch(query) {
-    const remaining = demoRemaining();
-    if (remaining <= 0 || !query.trim()) return;
+    const { allowed } = demoStatus();
+    if (!allowed || !query.trim()) return;
 
     const resultsEl = document.getElementById("demo-results");
     if (!resultsEl) return;
 
-    // Decrement BEFORE the request so refreshing can't bypass the limit
-    const newRemaining = remaining - 1;
-    setDemoRemaining(newRemaining);
-    updateDemoUI(newRemaining);
+    // Record BEFORE the request — prevents a refresh from granting
+    // an extra search if the page reloads mid-request.
+    recordDemoSearch();
+    updateDemoUI();
 
     resultsEl.innerHTML = `<p class="trusted-search__status">Searching trusted sources&hellip;</p>`;
 
@@ -1196,8 +1280,9 @@
   const demoBtn   = document.getElementById("demo-search-btn");
 
   if (demoInput && demoBtn) {
-    // Restore UI state on page load/refresh
-    updateDemoUI(demoRemaining());
+    // Restore UI state on page load/refresh — also re-checks the
+    // cooldown timer so the counter updates automatically.
+    updateDemoUI();
 
     demoBtn.addEventListener("click", () => {
       const q = demoInput.value.trim();
@@ -1217,6 +1302,10 @@
         runDemoSearch(chip.dataset.q);
       });
     });
+
+    // Re-check cooldown every 60 seconds so the "Try again in X hours"
+    // counter updates live without needing a page reload.
+    setInterval(updateDemoUI, 60 * 1000);
   }
 
   document.getElementById("app-search-input")?.addEventListener("input", () => {
@@ -1257,7 +1346,6 @@
       if (value) filterQuestionsByWord(value);
     });
   }
-  wireAskForm("hero-ask-form", "hero-ask-input", true);
   wireAskForm("home-ask-form", "home-ask-input", false);
 
   /* ---------------------------------------------------
