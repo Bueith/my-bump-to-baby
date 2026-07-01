@@ -1727,3 +1727,24 @@ img { max-width: 100%; display: block; }
 @media (max-width: 600px) {
   .app-ask-form { flex-direction: column; }
 }
+
+/* ── In-app logo replacements (leaf emoji removed) ──────── */
+.onboard-logo {
+  height: 56px;
+  width: auto;
+  display: block;
+  margin: 0 auto 16px;
+  object-fit: contain;
+}
+.app-nav__logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.streak-chip__logo {
+  height: 16px;
+  width: auto;
+  vertical-align: middle;
+  object-fit: contain;
+}
