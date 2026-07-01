@@ -1117,16 +1117,28 @@
   //   many hours/minutes remain before the next unlock.
   const DEMO_KEY      = "nurture_demo_v2";
   const INITIAL_MAX   = 3;
-  const COOLDOWN_REFILL = 1;          // searches per cooldown cycle
+  const COOLDOWN_REFILL = 1;
   const COOLDOWN_MS   = 24 * 60 * 60 * 1000;
+
+  // Remove the old key from a previous implementation that used a
+  // simple counter with no phase/timestamp — if it exists it will
+  // never be read by the new code, but clearing it avoids confusion.
+  try { localStorage.removeItem("nurture_demo_remaining"); } catch (e) {}
 
   function loadDemoState() {
     try {
       const raw = localStorage.getItem(DEMO_KEY);
-      if (!raw) return { count: 0, windowStart: Date.now(), phase: "initial" };
-      return JSON.parse(raw);
+      if (!raw) return { count: 0, windowStart: 0, phase: "initial" };
+      const s = JSON.parse(raw);
+      // Defensively default phase — if the stored object is missing
+      // the phase field (e.g. from an older version of this code or a
+      // partial write), it would fall through to the cooldown branch
+      // and only allow 1 search instead of 3. Always default to
+      // "initial" if the phase is missing or unrecognised.
+      if (s.phase !== "initial" && s.phase !== "cooldown") s.phase = "initial";
+      return s;
     } catch (e) {
-      return { count: 0, windowStart: Date.now(), phase: "initial" };
+      return { count: 0, windowStart: 0, phase: "initial" };
     }
   }
 
@@ -1144,8 +1156,11 @@
       const used      = s.count || 0;
       const remaining = Math.max(0, INITIAL_MAX - used);
       if (remaining > 0) return { allowed: true, remaining, hoursLeft: null };
-      // Exhausted initial quota — check if cooldown has elapsed
-      const elapsed = now - (s.windowStart || now);
+      // Exhausted initial quota — check if cooldown has elapsed.
+      // windowStart of 0 means the clock hasn't started yet (no
+      // searches recorded), so treat elapsed as 0, not "forever".
+      const ws      = s.windowStart || 0;
+      const elapsed = ws > 0 ? now - ws : 0;
       if (elapsed >= COOLDOWN_MS) {
         // Cooldown over — shift to "cooldown" phase, reset window
         const next = { count: 0, windowStart: now, phase: "cooldown" };
@@ -1162,7 +1177,8 @@
     const remaining = Math.max(0, COOLDOWN_REFILL - used);
     if (remaining > 0) return { allowed: true, remaining, hoursLeft: null };
     // Used up the cooldown search — check if next window started
-    const elapsed = now - (s.windowStart || now);
+    const ws2     = s.windowStart || 0;
+    const elapsed = ws2 > 0 ? now - ws2 : 0;
     if (elapsed >= COOLDOWN_MS) {
       const next = { count: 0, windowStart: now, phase: "cooldown" };
       saveDemoState(next);
